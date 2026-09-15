@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nabeen survivor 1.1</title>
+<title>Nabeen survivor 1.0</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b12;font-family:Arial,"Malgun Gothic",sans-serif;color:#fff}
@@ -117,9 +117,9 @@ function spawnEnemy(){
   const t=Math.random();
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
-    e={x,y,r:18,hp:60+level*5,maxHp:60+level*5,speed:70+level*1.0,damage:900,elite:true};
+    e={x,y,r:18,hp:60+level*5,maxHp:60+level*20,speed:70+level*1.0,damage:900,elite:true};
   }else{
-    e={x,y,r:11+Math.random()*4,hp:30+level*2,maxHp:30+level*2,speed:55+level*1.2,damage:600,elite:false};
+    e={x,y,r:11+Math.random()*4,hp:30+level*2,maxHp:30+level*15,speed:55+level*1.2,damage:600,elite:false};
   }
   enemies.push(e);
 }
@@ -144,13 +144,13 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=4+lv;
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,20+lv*4,430,4,1.1,"shotgun");
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,25+lv*5,430,4,1.1,"shotgun");
     w.cooldown=Math.max(.65,1.35-lv*.08);
   }else if(w.type==="fireball"){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=Math.min(3,1+Math.floor(lv/3));
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,30+lv*8,400,10,2.0,"fireball",55+lv*8);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,30+lv*10,400,10,2.0,"fireball",55+lv*8);
     w.cooldown=Math.max(.7,1.8-lv*.1);
   }else if(w.type==="lightning"){
     const targets=nearestEnemies(1+Math.floor(lv/2),player.range+80); if(!targets.length)return;

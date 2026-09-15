@@ -113,7 +113,7 @@ function startGame(){
   updateDamageMeter();
   player={
     x:0,y:0,r:18,speed:220,maxHp:30,hp:30,
-    damage:5,fireRate:.14,bulletSpeed:500,range:520,multi:1
+    damage:3,fireRate:.14,bulletSpeed:500,range:520,multi:1
   };
   cameraX=player.x-W/2;
   cameraY=player.y-H/2;
@@ -149,9 +149,9 @@ function spawnEnemy(){
   const t=Math.random();
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
-    e={x,y,r:18,hp:66+level*13,maxHp:66+level*13,speed:90+level*1.2,damage:900,elite:true};
+    e={x,y,r:18,hp:75+level*20,maxHp:75+level*20,speed:90+level*1.2,damage:900,elite:true};
   }else{
-    e={x,y,r:11+Math.random()*4,hp:48+level*13,maxHp:48+level*10,speed:75+level*1.2,damage:600,elite:false};
+    e={x,y,r:11+Math.random()*4,hp:50+level*20,maxHp:50+level*20,speed:75+level*1.2,damage:600,elite:false};
   }
   enemies.push(e);
 }

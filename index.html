@@ -105,7 +105,7 @@ addEventListener("keydown",e=>{
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
 function startGame(){
-  running=true; paused=false; elapsed=0;kills=0;level=1;xp=0;xpNeed=8;weaponLevel=1;
+  running=true; paused=false; elapsed=0;kills=0;level=3;xp=0;xpNeed=8;weaponLevel=1;
   enemies=[];bullets=[];gems=[];particles=[];
   weapons=[{type:"magic",level:1,cooldown:0},{type:"shotgun",level:0,cooldown:0},{type:"fireball",level:0,cooldown:0},{type:"lightning",level:0,cooldown:0},{type:"orbit",level:0,cooldown:0}];
   lightningFlash=0;
@@ -113,7 +113,7 @@ function startGame(){
   updateDamageMeter();
   player={
     x:0,y:0,r:18,speed:200,maxHp:30,hp:30,
-    damage:10,fireRate:.12,bulletSpeed:500,range:520,multi:1
+    damage:14,fireRate:.12,bulletSpeed:500,range:520,multi:1
   };
   cameraX=player.x-W/2;
   cameraY=player.y-H/2;

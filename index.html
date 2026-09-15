@@ -46,7 +46,7 @@ button:hover{filter:brightness(1.1)}
   <div class="panel">
     <h1>⚔️ Survivor <small style="font-size:14px;color:#8fa3c7">v1.4.1</small></h1>
     <p>WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
-    <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 적은 느리고 적지만, 부딪히면 큰 피해를 입습니다.</p>
+    <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 듀아악!</p>
     <button id="startBtn">게임 시작</button>
   </div>
 </div>
@@ -117,9 +117,9 @@ function spawnEnemy(){
   const t=Math.random();
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
-    e={x,y,r:18,hp:60+level*5,maxHp:60+level*50,speed:85+level*1.0,damage:900,elite:true};
+    e={x,y,r:18,hp:70+level*35,maxHp:60+level*50,speed:75+level*1.2,damage:900,elite:true};
   }else{
-    e={x,y,r:11+Math.random()*4,hp:30+level*2,maxHp:30+level*35,speed:65+level*1.2,damage:600,elite:false};
+    e={x,y,r:11+Math.random()*4,hp:40+level*20,maxHp:30+level*35,speed:60+level*1.2,damage:600,elite:false};
   }
   enemies.push(e);
 }
@@ -191,14 +191,14 @@ function showUpgrade(){
   const lightning=weapons.find(w=>w.type==="lightning");
   const orbit=weapons.find(w=>w.type==="orbit");
   const pool=[
-    {title:"🔥 공격력 강화",desc:"기본 공격력 +10",apply:()=>player.damage+=10},
+    {title:"🔥 공격력 강화",desc:"기본 공격력 +5",apply:()=>player.damage+=5},
     {title:"⚡ 기본 무기 강화",desc:`마탄 Lv.${magic.level+1} (공격력 증가)`,apply:()=>magic.level++},
     {title:"💨 이동속도",desc:"이동속도 +30",apply:()=>player.speed+=30},
     {title:"❤️ 최대 체력",desc:"최대 HP +25 및 회복",apply:()=>{player.maxHp+=25;player.hp=Math.min(player.maxHp,player.hp+25)}},
     {title:"🌀 투사체 증가",desc:"마탄 투사체 +1",apply:()=>player.multi+=1},
-    {title:"🎯 사거리 증가",desc:"공격 사거리 +100",apply:()=>player.range+=100},
+    {title:"🎯 사거리 증가",desc:"공격 사거리 +50",apply:()=>player.range+=50},
     ...(shotgun.level===0?[{title:"🔫 산탄총 획득",desc:"전방에 여러 발을 부채꼴로 발사",apply:()=>shotgun.level=1}]:[{title:"🔫 산탄총 강화",desc:`산탄총 Lv.${shotgun.level+1} · 탄환 증가`,apply:()=>shotgun.level++}]),
-    ...(fireball.level===0?[{title:"☄️ 화염구 획득",desc:"강력한 화염구가 적중 시 주변도 공격",apply:()=>fireball.level=1}]:[{title:"☄️ 화염구 강화",desc:`화염구 Lv.${fireball.level+1} · 폭발 범위 증가`,apply:()=>fireball.level++}]),
+    ...(fireball.level===0?[{title:"☄️ 화염구 획득",desc:"강력한 화염구가 적중 시 주변도 공격",apply:()=>fireball.level=1}]:[{title:"☄️ 화염구 강화",desc:`화염구 Lv.${fireball.level+1} · 화염구 증가`,apply:()=>fireball.level++}]),
     ...(lightning.level===0?[{title:"⚡ 번개 획득",desc:"가까운 적에게 즉발 번개 공격",apply:()=>lightning.level=1}]:[{title:"⚡ 번개 강화",desc:`번개 Lv.${lightning.level+1} · 연쇄 대상 증가`,apply:()=>lightning.level++}]),
     ...(orbit.level===0?[{title:"🗡️ 회전검 획득",desc:"주변을 회전하며 적에게 피해",apply:()=>orbit.level=1}]:[{title:"🗡️ 회전검 강화",desc:`회전검 Lv.${orbit.level+1} · 검 증가`,apply:()=>orbit.level++}])
   ];

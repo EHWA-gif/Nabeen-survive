@@ -44,7 +44,7 @@ button:hover{filter:brightness(1.1)}
 </div>
 <div id="centerMsg">
   <div class="panel">
-    <h1>⚔️ Survivor <small style="font-size:14px;color:#8fa3c7">v1.4.1</small></h1>
+    <h1>⚔️ Survivor <small style="font-size:14px;color:#8fa3c7">v1.0.1</small></h1>
     <p>WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
     <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 듀아악!</p>
     <button id="startBtn">게임 시작</button>
@@ -97,7 +97,7 @@ function startGame(){
   lightningFlash=0;
   player={
     x:0,y:0,r:18,speed:220,maxHp:30,hp:30,
-    damage:5,fireRate:.15,bulletSpeed:470,range:520,multi:1
+    damage:7,fireRate:.15,bulletSpeed:470,range:520,multi:1
   };
   cameraX=player.x-W/2;
   cameraY=player.y-H/2;
@@ -117,9 +117,9 @@ function spawnEnemy(){
   const t=Math.random();
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
-    e={x,y,r:18,hp:65+level*20,maxHp:65+level*20,speed:75+level*1.2,damage:900,elite:true};
+    e={x,y,r:18,hp:60+level*10,maxHp:60+level*10,speed:75+level*1.2,damage:900,elite:true};
   }else{
-    e={x,y,r:11+Math.random()*4,hp:35+level*20,maxHp:40+level*20,speed:60+level*1.2,damage:600,elite:false};
+    e={x,y,r:11+Math.random()*4,hp:35+level*10,maxHp:35+level*10,speed:60+level*1.2,damage:600,elite:false};
   }
   enemies.push(e);
 }
@@ -144,19 +144,18 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=4+lv;
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,25+lv*5,430,4,1.1,"shotgun");
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,35+lv*6,500,6,1.1,"shotgun");
     w.cooldown=Math.max(.65,1.35-lv*.08);
   }else if(w.type==="fireball"){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=Math.min(3,1+Math.floor(lv/3));
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,30+lv*10,400,10,2.0,"fireball",55+lv*8);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,50+lv*10,430,14,2.0,"fireball",65+lv*10);
     w.cooldown=Math.max(.7,1.8-lv*.1);
   }else if(w.type==="lightning"){
     const targets=nearestEnemies(1+Math.floor(lv/2),player.range+80); if(!targets.length)return;
     for(const e of targets){
       e.hp-=35+lv*15;
-      lightningFlash=.12;
       for(let i=0;i<10;i++)particles.push({x:e.x,y:e.y,vx:(Math.random()-.5)*180,vy:(Math.random()-.5)*180,life:.4});
       if(e.hp<=0){kills++;gems.push({x:e.x,y:e.y,r:e.elite?7:5,value:e.elite?4:1}); enemies.splice(enemies.indexOf(e),1);}
     }

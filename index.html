@@ -149,9 +149,9 @@ function spawnEnemy(){
   const t=Math.random();
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
-    e={x,y,r:18,hp:75+level*40,maxHp:75+level*40,speed:90+level*1.2,damage:900,elite:true};
+    e={x,y,r:18,hp:85+level*40,maxHp:85+level*40,speed:90+level*1.2,damage:900,elite:true};
   }else{
-    e={x,y,r:11+Math.random()*4,hp:50+level*40,maxHp:50+level*40,speed:75+level*1.2,damage:600,elite:false};
+    e={x,y,r:11+Math.random()*4,hp:60+level*40,maxHp:60+level*40,speed:75+level*1.2,damage:600,elite:false};
   }
   enemies.push(e);
 }
@@ -224,7 +224,7 @@ function showUpgrade(){
   const lightning=weapons.find(w=>w.type==="lightning");
   const orbit=weapons.find(w=>w.type==="orbit");
   const pool=[
-    {title:"🔥 공격력 강화",desc:"기본 공격력 +7",apply:()=>player.damage+=9},
+    {title:"🔥 공격력 강화",desc:"기본 공격력 +6",apply:()=>player.damage+=9},
     {title:"⚡ 나쫀쿠 강화",desc:`나쫀쿠 Lv.${magic.level+1} (공격력 증가)`,apply:()=>magic.level++},
     {title:"💨 이동속도",desc:"이동속도 +30",apply:()=>player.speed+=30},
     {title:"❤️ 최대 체력",desc:"최대 HP +25 및 회복",apply:()=>{player.maxHp+=25;player.hp=Math.min(player.maxHp,player.hp+25)}},
@@ -296,7 +296,7 @@ function update(dt){
   if(spawnTimer<=0){
     spawnTimer=interval;
     const count=elapsed<30?2:elapsed<90?4:elapsed<180?5:7;
-    for(let i=0;i<count && enemies.length<300;i++)spawnEnemy();
+    for(let i=0;i<count && enemies.length<500;i++)spawnEnemy();
   }
 
   shoot(dt);

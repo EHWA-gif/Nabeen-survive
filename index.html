@@ -117,9 +117,9 @@ function spawnEnemy(){
   const t=Math.random();
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
-    e={x,y,r:18,hp:60+level*5,maxHp:60+level*20,speed:70+level*1.0,damage:900,elite:true};
+    e={x,y,r:18,hp:60+level*5,maxHp:60+level*50,speed:85+level*1.0,damage:900,elite:true};
   }else{
-    e={x,y,r:11+Math.random()*4,hp:30+level*2,maxHp:30+level*15,speed:55+level*1.2,damage:600,elite:false};
+    e={x,y,r:11+Math.random()*4,hp:30+level*2,maxHp:30+level*35,speed:65+level*1.2,damage:600,elite:false};
   }
   enemies.push(e);
 }
@@ -179,7 +179,7 @@ function shoot(dt){
 function addXp(v){
   xp+=v;
   while(xp>=xpNeed){
-    xp-=xpNeed; level++; xpNeed=Math.floor(xpNeed*1.32+3);
+    xp-=xpNeed; level++; xpNeed=Math.floor(xpNeed*1.20+2);
     paused=true; showUpgrade();
   }
 }

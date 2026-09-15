@@ -113,7 +113,7 @@ function startGame(){
   updateDamageMeter();
   player={
     x:0,y:0,r:18,speed:220,maxHp:30,hp:30,
-    damage:8,fireRate:.13,bulletSpeed:470,range:520,multi:1
+    damage:7,fireRate:.13,bulletSpeed:470,range:520,multi:1
   };
   cameraX=player.x-W/2;
   cameraY=player.y-H/2;
@@ -170,13 +170,13 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=player.multi+Math.floor((lv-1)/3);
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,player.damage+lv*4,player.bulletSpeed,5,1.5);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,player.damage+lv*3,player.bulletSpeed,5,1.5);
     w.cooldown=Math.max(.18,player.fireRate);
   }else if(w.type==="shotgun"){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=4+lv;
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,50+lv*25,500,8,1.1,"shotgun");
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,45+lv*20,500,8,1.1,"shotgun");
     w.cooldown=Math.max(.65,1.35-lv*.08);
   }else if(w.type==="fireball"){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;
@@ -212,7 +212,7 @@ function shoot(dt){
 function addXp(v){
   xp+=v;
   while(xp>=xpNeed){
-    xp-=xpNeed; level++; xpNeed=Math.floor(xpNeed*1.20+2);
+    xp-=xpNeed; level++; xpNeed=Math.floor(xpNeed*1.00+2);
     paused=true; showUpgrade();
   }
 }

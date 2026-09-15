@@ -117,9 +117,9 @@ function spawnEnemy(){
   const t=Math.random();
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
-    e={x,y,r:18,hp:70+level*35,maxHp:60+level*50,speed:75+level*1.2,damage:900,elite:true};
+    e={x,y,r:18,hp:65+level*20,maxHp:65+level*20,speed:75+level*1.2,damage:900,elite:true};
   }else{
-    e={x,y,r:11+Math.random()*4,hp:40+level*20,maxHp:30+level*35,speed:60+level*1.2,damage:600,elite:false};
+    e={x,y,r:11+Math.random()*4,hp:35+level*20,maxHp:40+level*20,speed:60+level*1.2,damage:600,elite:false};
   }
   enemies.push(e);
 }

@@ -295,8 +295,8 @@ function update(dt){
   const interval=Math.max(.42,1.15-elapsed/120);
   if(spawnTimer<=0){
     spawnTimer=interval;
-    const count=elapsed<30?2:elapsed<90?3:elapsed<180?4:6;
-    for(let i=0;i<count && enemies.length<140;i++)spawnEnemy();
+    const count=elapsed<30?2:elapsed<90?4:elapsed<180?5:7;
+    for(let i=0;i<count && enemies.length<300;i++)spawnEnemy();
   }
 
   shoot(dt);

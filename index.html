@@ -113,7 +113,7 @@ function startGame(){
   updateDamageMeter();
   player={
     x:0,y:0,r:18,speed:220,maxHp:30,hp:30,
-    damage:7,fireRate:.15,bulletSpeed:470,range:520,multi:1
+    damage:8,fireRate:.13,bulletSpeed:470,range:520,multi:1
   };
   cameraX=player.x-W/2;
   cameraY=player.y-H/2;
@@ -224,7 +224,7 @@ function showUpgrade(){
   const lightning=weapons.find(w=>w.type==="lightning");
   const orbit=weapons.find(w=>w.type==="orbit");
   const pool=[
-    {title:"🔥 공격력 강화",desc:"기본 공격력 +5",apply:()=>player.damage+=5},
+    {title:"🔥 공격력 강화",desc:"기본 공격력 +7",apply:()=>player.damage+=7},
     {title:"⚡ 기본 무기 강화",desc:`마탄 Lv.${magic.level+1} (공격력 증가)`,apply:()=>magic.level++},
     {title:"💨 이동속도",desc:"이동속도 +30",apply:()=>player.speed+=30},
     {title:"❤️ 최대 체력",desc:"최대 HP +25 및 회복",apply:()=>{player.maxHp+=25;player.hp=Math.min(player.maxHp,player.hp+25)}},

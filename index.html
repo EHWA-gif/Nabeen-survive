@@ -83,6 +83,7 @@ let W=1920,H=1080, running=false, paused=false, last=0, elapsed=0;
 let cameraX=0, cameraY=0;
 const keys={};
 let player, enemies=[], bullets=[], gems=[], magnetItems=[], particles=[];
+let magnetEffect={active:false,time:0,duration:.85,gems:[],gained:0};
 let kills=0, level=1, xp=0, xpNeed=8, weaponLevel=1, spawnTimer=0, shootTimer=0, hitCooldown=0;
 let upgrades=[];
 let weapons=[];
@@ -161,25 +162,29 @@ function dropGem(enemy){
 }
 
 function collectAllGems(){
+  const collected=gems.map(g=>({x:g.x,y:g.y,value:g.value,r:g.r}));
   let gained=0;
-  for(const g of gems) gained+=g.value;
-  if(gained>0) addXp(gained);
+  for(const g of collected) gained+=g.value;
+
+  magnetEffect={
+    active:true,
+    time:0,
+    duration:.85,
+    gems:collected,
+    gained:gained
+  };
   gems.length=0;
 
-  // 자석을 먹었다는 피드백용 파티클
-  for(let i=0;i<35;i++){
+  for(let i=0;i<45;i++){
     const a=Math.random()*Math.PI*2;
-    const s=80+Math.random()*260;
+    const s=90+Math.random()*300;
     particles.push({
-      x:player.x,
-      y:player.y,
-      vx:Math.cos(a)*s,
-      vy:Math.sin(a)*s,
-      life:.7
+      x:player.x,y:player.y,
+      vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.65
     });
   }
 
-  showMessage(`🧲 자석 발동! 경험치 ${gained} 획득`);
+  showMessage("🧲 MAGNET!");
 }
 
 function spawnEnemy(){
@@ -402,7 +407,19 @@ function update(dt){
   }
 
 
-  // 자석 아이템 처리: 플레이어가 먹으면 현재 맵에 존재하는 모든 경험치를 즉시 획득
+  // 자석 발동 연출: 경험치 보석이 플레이어에게 빨려 들어온다.
+  if(magnetEffect.active){
+    magnetEffect.time+=dt;
+    const p=Math.min(1,magnetEffect.time/magnetEffect.duration);
+
+    if(p>=1){
+      if(magnetEffect.gained>0) addXp(magnetEffect.gained);
+      magnetEffect.active=false;
+      showMessage(`🧲 자석 발동! 경험치 ${magnetEffect.gained} 획득`);
+    }
+  }
+
+  // 자석 아이템 처리: 플레이어가 먹으면 현재 맵에 존재하는 모든 경험치를 흡수
   for(let i=magnetItems.length-1;i>=0;i--){
     const m=magnetItems[i];
     m.life-=dt;
@@ -491,6 +508,39 @@ function draw(){
     ctx.fillRect(-10,9,6,4);
     ctx.fillRect(4,9,6,4);
 
+    ctx.restore();
+  }
+
+  // 자석 발동 중 경험치 보석이 플레이어에게 날아가는 연출
+  if(magnetEffect.active && magnetEffect.gems.length){
+    const p=Math.min(1,magnetEffect.time/magnetEffect.duration);
+    const ease=1-Math.pow(1-p,3);
+
+    for(const g of magnetEffect.gems){
+      const x=g.x+(player.x-g.x)*ease;
+      const y=g.y+(player.y-g.y)*ease;
+      const px=sx(x),py=sy(y);
+      if(px<-20||px>W+20||py<-20||py>H+20)continue;
+
+      ctx.save();
+      ctx.globalAlpha=1-p*.35;
+      ctx.shadowBlur=14;
+      ctx.shadowColor="#58d5ff";
+      ctx.fillStyle="#58d5ff";
+      ctx.beginPath();
+      ctx.arc(px,py,Math.max(3,g.r*.9),0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 플레이어 주변으로 퍼졌다가 사라지는 흡수 파동
+    ctx.save();
+    ctx.globalAlpha=(1-p)*.75;
+    ctx.strokeStyle="#58d5ff";
+    ctx.lineWidth=4;
+    ctx.beginPath();
+    ctx.arc(sx(player.x),sy(player.y),24+58*p,0,Math.PI*2);
+    ctx.stroke();
     ctx.restore();
   }
 

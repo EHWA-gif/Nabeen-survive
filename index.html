@@ -392,7 +392,7 @@ function update(dt){
         if(b.splash>0){
           for(const other of enemies){
             if(other!==e && Math.hypot(other.x-b.x,other.y-b.y)<b.splash){
-              const splashDamage=b.damage*.6;
+              const splashDamage=b.damage*.99;
               const dealtSplash=Math.min(other.hp,splashDamage);
               other.hp-=dealtSplash;
               recordDamage(b.source,dealtSplash);

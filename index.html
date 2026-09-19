@@ -360,14 +360,14 @@ function update(dt){
   if(orbitWeapon && orbitWeapon.level>0){
     const bladeCount=1+Math.floor((orbitWeapon.level-1)/2);
     const orbitR=90+orbitWeapon.level*15;
-    const spin=elapsed*2.6;
+    const spin=elapsed*5.5;
     for(let k=0;k<bladeCount;k++){
       const a=spin+k*Math.PI*2/bladeCount;
       const ox=player.x+Math.cos(a)*orbitR, oy=player.y+Math.sin(a)*orbitR;
       for(let j=enemies.length-1;j>=0;j--){
         const e=enemies[j];
-        if(Math.hypot(ox-e.x,oy-e.y)<e.r+20){
-          if(!e.orbitHit||elapsed-e.orbitHit>.28){const dealt=Math.min(e.hp,100+orbitWeapon.level*10);e.hp-=dealt;recordDamage("orbit",dealt);e.orbitHit=elapsed;
+        if(Math.hypot(ox-e.x,oy-e.y)<e.r+80){
+          if(!e.orbitHit||elapsed-e.orbitHit>.28){const dealt=Math.min(e.hp,240+orbitWeapon.level*5);e.hp-=dealt;recordDamage("orbit",dealt);e.orbitHit=elapsed;
             if(e.hp<=0){kills++;dropGem(e);enemies.splice(j,1);}
           }
         }

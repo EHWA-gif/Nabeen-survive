@@ -318,9 +318,22 @@ function hurtPlayer(d){
 }
 
 function gameOver(){
-  running=false;paused=false;
+  running=false;
+  paused=false;
+
+  const survivalSeconds=Math.floor(elapsed);
+  const finalScore=survivalSeconds*10+kills*20;
+
   document.getElementById("centerMsg").style.display="flex";
-  document.getElementById("centerMsg").innerHTML=`<div class="panel"><h1>💀 게임 오버</h1><p>생존 시간 <b>${formatTime(elapsed)}</b></p><p>처치 <b>${kills}</b> · 레벨 <b>${level}</b></p><button onclick="startGame()">다시 시작</button></div>`;
+  document.getElementById("centerMsg").innerHTML=
+    `<div class="panel">
+      <h1>💀 게임 오버</h1>
+      <p>생존 시간 <b>${formatTime(elapsed)}</b></p>
+      <p>처치 <b>${kills}</b> · 레벨 <b>${level}</b></p>
+      <p style="font-size:24px;margin-top:18px;">🏆 점수 <b>${finalScore.toLocaleString()}</b></p>
+      <p style="color:#8fa3c7;font-size:13px;">생존 ${survivalSeconds}초 × 10 + 처치 ${kills} × 20</p>
+      <button onclick="startGame()">다시 시작</button>
+    </div>`;
 }
 
 function formatTime(s){

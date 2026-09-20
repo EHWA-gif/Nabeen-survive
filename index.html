@@ -51,7 +51,7 @@ button:hover{filter:brightness(1.1)}
   <div class="dm-row"><span>🔫 산탄총</span><b id="dmgShotgun">0</b></div>
   <div class="dm-row"><span>☄️ 화염구</span><b id="dmgFireball">0</b></div>
   <div class="dm-row"><span>⚡ 번개</span><b id="dmgLightning">0</b></div>
-  <div class="dm-row"><span>🗡️ 회전검</span><b id="dmgOrbit">0</b></div>
+  <div class="dm-row"><span>🪃 마법구</span><b id="dmgBoomerang">0</b></div>
   <div class="dm-row dm-total"><span>TOTAL</span><b id="dmgTotal">0</b></div>
   <div class="dm-row dm-dps"><span>DPS</span><b id="dmgDps">0</b></div>
 </div>
@@ -88,7 +88,7 @@ let kills=0, level=1, xp=0, xpNeed=8, weaponLevel=1, spawnTimer=0, shootTimer=0,
 let upgrades=[];
 let weapons=[];
 let lightningFlash=0;
-let damageMeter={magic:0,shotgun:0,fireball:0,lightning:0,orbit:0};
+let damageMeter={magic:0,shotgun:0,fireball:0,lightning:0,boomerang:0};
 
 function resize(){
   const r=gameEl.getBoundingClientRect();
@@ -108,9 +108,9 @@ addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 function startGame(){
   running=true; paused=false; elapsed=0;kills=0;level=1;xp=0;xpNeed=8;weaponLevel=1;
   enemies=[];bullets=[];gems=[];magnetItems=[];particles=[];
-  weapons=[{type:"magic",level:1,cooldown:0},{type:"shotgun",level:0,cooldown:0},{type:"fireball",level:0,cooldown:0},{type:"lightning",level:0,cooldown:0},{type:"orbit",level:0,cooldown:0}];
+  weapons=[{type:"magic",level:1,cooldown:0},{type:"shotgun",level:0,cooldown:0},{type:"fireball",level:0,cooldown:0},{type:"lightning",level:0,cooldown:0},{type:"boomerang",level:0,cooldown:0}];
   lightningFlash=0;
-  damageMeter={magic:0,shotgun:0,fireball:0,lightning:0,orbit:0};
+  damageMeter={magic:0,shotgun:0,fireball:0,lightning:0,boomerang:0};
   updateDamageMeter();
   player={
     x:0,y:0,r:18,speed:200,maxHp:30,hp:30,
@@ -130,8 +130,8 @@ function recordDamage(type, amount){
   damageMeter[type]+=amount;
 }
 function updateDamageMeter(){
-  const names=["magic","shotgun","fireball","lightning","orbit"];
-  const ids=["dmgMagic","dmgShotgun","dmgFireball","dmgLightning","dmgOrbit"];
+  const names=["magic","shotgun","fireball","lightning","boomerang"];
+  const ids=["dmgMagic","dmgShotgun","dmgFireball","dmgLightning","dmgBoomerang"];
   let total=0;
   for(let i=0;i<names.length;i++){
     const value=damageMeter[names[i]]; total+=value;
@@ -209,7 +209,7 @@ function nearestEnemies(count, range){
     .sort((a,b)=>((a.x-player.x)**2+(a.y-player.y)**2)-((b.x-player.x)**2+(b.y-player.y)**2)).slice(0,count);
 }
 function addBullet(angle, damage, speed, r, life, kind="normal", splash=0){
-  bullets.push({x:player.x+Math.cos(angle)*20,y:player.y+Math.sin(angle)*20,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r,damage,life,kind,splash,source:kind==="shotgun"?"shotgun":kind==="fireball"?"fireball":"magic"});
+  bullets.push({x:player.x+Math.cos(angle)*20,y:player.y+Math.sin(angle)*20,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r,damage,life,kind,splash,source:kind==="shotgun"?"shotgun":kind==="fireball"?"fireball":kind==="boomerang"?"boomerang":"magic"});
 }
 function shootWeapon(w){
   const lv=w.level;
@@ -242,8 +242,24 @@ function shootWeapon(w){
       if(e.hp<=0){kills++;dropGem(e); enemies.splice(enemies.indexOf(e),1);}
     }
     w.cooldown=Math.max(.7,1.7-lv*.12);
-  }else if(w.type==="orbit"){
-    w.cooldown=.12;
+  }else if(w.type==="boomerang"){
+    const count=1+Math.floor((lv-1)/2);
+    const targets=nearestEnemies(count,player.range+210);
+    if(!targets.length)return;
+
+    for(let i=0;i<count;i++){
+      const target=targets[i%targets.length];
+      const base=Math.atan2(target.y-player.y,target.x-player.x);
+      const spread=(i-(count-1)/2)*.13;
+      addBullet(base+spread,100+lv*15,560,15,3.0,"boomerang");
+      const b=bullets[bullets.length-1];
+      b.returning=false;
+      b.outTime=.8;
+      b.returnSpeed=760;
+      b.hitOut=[];
+      b.hitBack=[];
+    }
+    w.cooldown=Math.max(.7,1.5-lv*.08);
   }
 }
 function shoot(dt){
@@ -270,7 +286,7 @@ function showUpgrade(){
   const shotgun=weapons.find(w=>w.type==="shotgun");
   const fireball=weapons.find(w=>w.type==="fireball");
   const lightning=weapons.find(w=>w.type==="lightning");
-  const orbit=weapons.find(w=>w.type==="orbit");
+  const boomerang=weapons.find(w=>w.type==="boomerang");
   const pool=[
     {title:"🔥 공격력 강화",desc:"기본 공격력 +9",apply:()=>player.damage+=9},
     {title:"⚡ 나쫀쿠 강화",desc:`나쫀쿠 Lv.${magic.level+1} (공격력 증가)`,apply:()=>magic.level++},
@@ -281,7 +297,7 @@ function showUpgrade(){
     ...(shotgun.level===0?[{title:"🔫 산탄총 획득",desc:"전방에 여러 발을 부채꼴로 발사",apply:()=>shotgun.level=1}]:[{title:"🔫 산탄총 강화",desc:`산탄총 Lv.${shotgun.level+1} · 탄환 증가`,apply:()=>shotgun.level++}]),
     ...(fireball.level===0?[{title:"☄️ 화염구 획득",desc:"강력한 화염구가 적중 시 주변도 공격",apply:()=>fireball.level=1}]:[{title:"☄️ 화염구 강화",desc:`화염구 Lv.${fireball.level+1} · 데미지 및 화염구 증가`,apply:()=>fireball.level++}]),
     ...(lightning.level===0?[{title:"⚡ 번개 획득",desc:"가까운 적에게 즉발 번개 공격",apply:()=>lightning.level=1}]:[{title:"⚡ 번개 강화",desc:`번개 Lv.${lightning.level+1} · 연쇄 대상 증가`,apply:()=>lightning.level++}]),
-    ...(orbit.level===0?[{title:"🗡️ 회전검 획득",desc:"주변을 회전하며 적에게 피해",apply:()=>orbit.level=1}]:[{title:"🗡️ 회전검 강화",desc:`회전검 Lv.${orbit.level+1} · 검 증가`,apply:()=>orbit.level++}])
+    ...(boomerang.level===0?[{title:"🪃 마법구 획득",desc:"전방으로 날아갔다가 플레이어에게 돌아오며 적에게 피해",apply:()=>boomerang.level=1}]:[{title:"🪃 부메랑 강화",desc:`부메랑 Lv.${boomerang.level+1} · 부메랑 증가`,apply:()=>boomerang.level++}])
   ];
   upgrades=[...pool].sort(()=>Math.random()-.5).slice(0,3);
   const box=document.getElementById("cards"); box.innerHTML="";
@@ -356,21 +372,22 @@ function update(dt){
     if(Math.hypot(player.x-e.x,player.y-e.y)<player.r+e.r) hurtPlayer(e.damage*dt);
   }
 
-  const orbitWeapon=weapons.find(w=>w.type==="orbit");
-  if(orbitWeapon && orbitWeapon.level>0){
-    const bladeCount=1+Math.floor((orbitWeapon.level-1)/2);
-    const orbitR=90+orbitWeapon.level*15;
-    const spin=elapsed*5.5;
-    for(let k=0;k<bladeCount;k++){
-      const a=spin+k*Math.PI*2/bladeCount;
-      const ox=player.x+Math.cos(a)*orbitR, oy=player.y+Math.sin(a)*orbitR;
-      for(let j=enemies.length-1;j>=0;j--){
-        const e=enemies[j];
-        if(Math.hypot(ox-e.x,oy-e.y)<e.r+80){
-          if(!e.orbitHit||elapsed-e.orbitHit>.28){const dealt=Math.min(e.hp,240+orbitWeapon.level*5);e.hp-=dealt;recordDamage("orbit",dealt);e.orbitHit=elapsed;
-            if(e.hp<=0){kills++;dropGem(e);enemies.splice(j,1);}
-          }
-        }
+  // 부메랑 무기: 바깥으로 날아갔다가 플레이어에게 되돌아온다.
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];
+    if(b.kind!=="boomerang")continue;
+
+    if(!b.returning){
+      b.outTime-=dt;
+      if(b.outTime<=0)b.returning=true;
+    }
+
+    if(b.returning){
+      const a=Math.atan2(player.y-b.y,player.x-b.x);
+      b.vx=Math.cos(a)*b.returnSpeed;
+      b.vy=Math.sin(a)*b.returnSpeed;
+      if(Math.hypot(player.x-b.x,player.y-b.y)<player.r+14){
+        bullets.splice(i,1);
       }
     }
   }
@@ -378,31 +395,66 @@ function update(dt){
 
   for(let i=bullets.length-1;i>=0;i--){
     const b=bullets[i];
-    b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
+    if(b.kind==="boomerang"){
+      b.life-=dt;
+      if(!b.returning){
+        b.x+=b.vx*dt;
+        b.y+=b.vy*dt;
+      }else{
+        const a=Math.atan2(player.y-b.y,player.x-b.x);
+        b.vx=Math.cos(a)*b.returnSpeed;
+        b.vy=Math.sin(a)*b.returnSpeed;
+        b.x+=b.vx*dt;
+        b.y+=b.vy*dt;
+      }
+    }else{
+      b.x+=b.vx*dt;
+      b.y+=b.vy*dt;
+      b.life-=dt;
+    }
+
     let remove=b.life<=0 ||
       Math.hypot(b.x-player.x,b.y-player.y)>player.range+180;
-    for(let j=enemies.length-1;j>=0&&!remove;j--){
-      const e=enemies[j];
-      if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r){
-        const dealt=Math.min(e.hp,b.damage);
-        e.hp-=dealt;
-        recordDamage(b.source,dealt);
-        remove=true;
-        for(let k=0;k<6;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.3});
-        if(b.splash>0){
-          for(const other of enemies){
-            if(other!==e && Math.hypot(other.x-b.x,other.y-b.y)<b.splash){
-              const splashDamage=b.damage*.99;
-              const dealtSplash=Math.min(other.hp,splashDamage);
-              other.hp-=dealtSplash;
-              recordDamage(b.source,dealtSplash);
-            }
-          }
-          for(let k=0;k<18;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*220,vy:(Math.random()-.5)*220,life:.55});
+
+    if(b.kind==="boomerang" && b.life>0){
+      const hitList=b.returning?b.hitBack:b.hitOut;
+      for(let j=enemies.length-1;j>=0;j--){
+        const e=enemies[j];
+        if(hitList.includes(e))continue;
+        if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r){
+          const dealt=Math.min(e.hp,b.damage);
+          e.hp-=dealt;
+          recordDamage("boomerang",dealt);
+          hitList.push(e);
+          for(let k=0;k<6;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.3});
+          if(e.hp<=0){kills++;dropGem(e);enemies.splice(j,1);}
         }
-        if(e.hp<=0){kills++;dropGem(e);enemies.splice(j,1);}
+      }
+    }else{
+      for(let j=enemies.length-1;j>=0&&!remove;j--){
+        const e=enemies[j];
+        if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r){
+          const dealt=Math.min(e.hp,b.damage);
+          e.hp-=dealt;
+          recordDamage(b.source,dealt);
+          remove=true;
+          for(let k=0;k<6;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.3});
+          if(b.splash>0){
+            for(const other of enemies){
+              if(other!==e && Math.hypot(other.x-b.x,other.y-b.y)<b.splash){
+                const splashDamage=b.damage*.99;
+                const dealtSplash=Math.min(other.hp,splashDamage);
+                other.hp-=dealtSplash;
+                recordDamage(b.source,dealtSplash);
+              }
+            }
+            for(let k=0;k<18;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*220,vy:(Math.random()-.5)*220,life:.55});
+          }
+          if(e.hp<=0){kills++;dropGem(e);enemies.splice(j,1);}
+        }
       }
     }
+
     if(remove)bullets.splice(i,1);
   }
 
@@ -584,13 +636,63 @@ function draw(){
     ctx.fillStyle="#fff";ctx.fill();ctx.globalAlpha=1;
   }
 
-  const orbitWeapon=weapons.find(w=>w.type==="orbit");
-  if(orbitWeapon && orbitWeapon.level>0){
-    const bladeCount=1+Math.floor((orbitWeapon.level-1)/2), orbitR=48+orbitWeapon.level*5, spin=elapsed*2.6;
-    for(let k=0;k<bladeCount;k++){
-      const a=spin+k*Math.PI*2/bladeCount, x=sx(player.x+Math.cos(a)*orbitR), y=sy(player.y+Math.sin(a)*orbitR);
-      ctx.save();ctx.translate(x,y);ctx.rotate(a+.8);ctx.fillStyle="#e5e7eb";ctx.fillRect(-4,-16,8,32);ctx.restore();
-    }
+  // 부메랑 투사체 렌더링
+  for(const b of bullets){
+    if(b.kind!=="boomerang")continue;
+    const x=sx(b.x), y=sy(b.y);
+    if(x<-40||x>W+40||y<-40||y>H+40)continue;
+
+    const angle=Math.atan2(b.vy,b.vx);
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(angle);
+
+    // 실제 부메랑처럼 양쪽 팔이 벌어진 곡선형 실루엣
+    ctx.beginPath();
+    ctx.moveTo(15,-2);
+    ctx.quadraticCurveTo(8,-13,-1,-15);
+    ctx.quadraticCurveTo(-7,-16,-10,-12);
+    ctx.quadraticCurveTo(-5,-8,1,-5);
+    ctx.quadraticCurveTo(5,-3,7,0);
+    ctx.quadraticCurveTo(5,3,1,5);
+    ctx.quadraticCurveTo(-5,8,-10,12);
+    ctx.quadraticCurveTo(-7,16,-1,15);
+    ctx.quadraticCurveTo(8,13,15,2);
+    ctx.quadraticCurveTo(16,0,15,-2);
+    ctx.closePath();
+
+    ctx.fillStyle="#facc15";
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(12,-2);
+    ctx.quadraticCurveTo(6,-10,0,-11);
+    ctx.quadraticCurveTo(-3,-12,-5,-10);
+    ctx.quadraticCurveTo(0,-7,5,-2);
+    ctx.quadraticCurveTo(7,0,5,2);
+    ctx.quadraticCurveTo(0,7,-5,10);
+    ctx.quadraticCurveTo(-3,12,0,11);
+    ctx.quadraticCurveTo(6,10,12,2);
+    ctx.quadraticCurveTo(13,0,12,-2);
+    ctx.closePath();
+
+    ctx.fillStyle="#fff2a8";
+    ctx.fill();
+
+    // 중앙은 어둡게 비워 실제 부메랑의 꺾인 형태를 강조
+    ctx.beginPath();
+    ctx.moveTo(6,-1.5);
+    ctx.quadraticCurveTo(1,-5,-5,-6.5);
+    ctx.quadraticCurveTo(-1,-3,2,0);
+    ctx.quadraticCurveTo(-1,3,-5,6.5);
+    ctx.quadraticCurveTo(1,5,6,1.5);
+    ctx.quadraticCurveTo(7,0,6,-1.5);
+    ctx.closePath();
+
+    ctx.fillStyle="#9f7a05";
+    ctx.fill();
+
+    ctx.restore();
   }
   if(lightningFlash>0){ctx.fillStyle=`rgba(220,245,255,${lightningFlash*1.8})`;ctx.fillRect(0,0,W,H);}
 

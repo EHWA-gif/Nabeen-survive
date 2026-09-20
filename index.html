@@ -141,7 +141,7 @@ function updateDamageMeter(){
   document.getElementById("dmgDps").textContent=(elapsed>0?(total/elapsed).toFixed(1):"0.0");
 }
 
-const MAGNET_DROP_CHANCE=0.05; // 적 처치 시 자석 아이템 드랍 확률 1.5%
+const MAGNET_DROP_CHANCE=0.025; // 적 처치 시 자석 아이템 드랍 확률 1.5%
 
 function dropGem(enemy){
   gems.push({

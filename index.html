@@ -293,7 +293,7 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=4+lv;
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,75+lv*20+player.damageBonus,700,9,1.1,"shotgun");
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,95+lv*25+player.damageBonus,700,9,1.1,"shotgun");
     w.cooldown=Math.max(.65,1.68-lv*.08);
   }else if(w.type==="fireball"){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;

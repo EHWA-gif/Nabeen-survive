@@ -419,14 +419,14 @@ function defeatEnemy(e){
   if(idx<0)return;
   if(e.boss){
     kills+=25;
-    for(let i=0;i<18;i++)dropGem(e);
+    for(let i=0;i<110;i++)dropGem(e);
     for(let i=0;i<100;i++){
       const a=Math.random()*Math.PI*2, sp=80+Math.random()*420;
       particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:.8+Math.random()*.6});
     }
     boss=null;
     document.getElementById("bossHud").style.display="none";
-    player.hp=Math.min(player.maxHp,player.hp+Math.ceil(player.maxHp*.35));
+    player.hp=Math.min(player.maxHp,player.hp+Math.ceil(player.maxHp*.75));
     showMessage("🏆 보스 처치! 대량의 경험치를 획득했습니다!");
   }else{
     kills++; dropGem(e);

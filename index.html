@@ -119,7 +119,7 @@ addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 function startGame(){
   running=true; paused=false; elapsed=0;kills=0;level=1;xp=0;xpNeed=8;weaponLevel=1;
   enemies=[];bullets=[];gems=[];magnetItems=[];particles=[];
-  boss=null; nextBossTime=60; bossAttackTimer=3; bossWaveTimer=5;
+  boss=null; nextBossTime=300; bossAttackTimer=3; bossWaveTimer=5;
   document.getElementById("bossHud").style.display="none";
   weapons=[{type:"magic",level:1,cooldown:0},{type:"shotgun",level:0,cooldown:0},{type:"fireball",level:0,cooldown:0},{type:"lightning",level:0,cooldown:0},{type:"boomerang",level:0,cooldown:0}];
   lightningFlash=0;

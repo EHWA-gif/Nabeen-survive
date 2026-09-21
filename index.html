@@ -204,7 +204,7 @@ function spawnBoss(){
   if(boss || !running)return;
   const angle=Math.random()*Math.PI*2;
   const dist=Math.min(W,H)*0.42;
-  const hp=Math.floor(3000 + level*400 + elapsed*14);
+  const hp=Math.floor(3000 + level*200 + elapsed*14);
   boss={
     x:player.x+Math.cos(angle)*dist, y:player.y+Math.sin(angle)*dist,
     r:64, hp, maxHp:hp, speed:90+Math.min(level*0.8,28), damage:900,

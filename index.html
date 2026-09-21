@@ -366,7 +366,7 @@ function showUpgrade(){
     ...(shotgun.level===0?[{title:"🔫 산탄총 획득",desc:"전방에 여러 발을 부채꼴로 발사",apply:()=>shotgun.level=1}]:[{title:"🔫 산탄총 강화",desc:`산탄총 Lv.${shotgun.level+1} · 탄환 증가`,apply:()=>shotgun.level++}]),
     ...(fireball.level===0?[{title:"☄️ 화염구 획득",desc:"강력한 화염구가 적중 시 주변도 공격",apply:()=>fireball.level=1}]:[{title:"☄️ 화염구 강화",desc:`화염구 Lv.${fireball.level+1} · 데미지 및 화염구 증가`,apply:()=>fireball.level++}]),
     ...(lightning.level===0?[{title:"⚡ 번개 획득",desc:"가까운 적에게 즉발 번개 공격",apply:()=>lightning.level=1}]:[{title:"⚡ 번개 강화",desc:`번개 Lv.${lightning.level+1} · 연쇄 대상 증가`,apply:()=>lightning.level++}]),
-    ...(boomerang.level===0?[{title:"🪃 마법구 획득",desc:"전방으로 날아갔다가 플레이어에게 돌아오며 적에게 피해",apply:()=>boomerang.level=1}]:[{title:"🪃 부메랑 강화",desc:`부메랑 Lv.${boomerang.level+1} · 부메랑 증가`,apply:()=>boomerang.level++}])
+    ...(boomerang.level===0?[{title:"🪃 마법구 획득",desc:"전방으로 날아갔다가 플레이어에게 돌아오며 적에게 피해",apply:()=>boomerang.level=1}]:[{title:"🪃 마법구 강화",desc:`마법구 Lv.${boomerang.level+1} · 마법구 증가`,apply:()=>boomerang.level++}])
   ];
   upgrades=[...pool].sort(()=>Math.random()-.5).slice(0,3);
   const box=document.getElementById("cards"); box.innerHTML="";

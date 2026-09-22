@@ -127,7 +127,7 @@ function startGame(){
   updateDamageMeter();
   player={
     x:0,y:0,r:18,speed:205,maxHp:30,hp:30,
-    damage:14,damageBonus:0,fireRate:.12,bulletSpeed:500,range:520,multi:1
+    damage:16,damageBonus:0,fireRate:.12,bulletSpeed:500,range:520,multi:1
   };
   cameraX=player.x-W/2;
   cameraY=player.y-H/2;
@@ -287,7 +287,7 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=player.multi+Math.floor((lv-1)/3);
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,player.damage+player.damageBonus+lv*7,player.bulletSpeed,5,2.4);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,player.damage+player.damageBonus+lv*10,player.bulletSpeed,5,2.4);
     w.cooldown=Math.max(.18,player.fireRate);
   }else if(w.type==="shotgun"){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
@@ -299,12 +299,12 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=Math.min(3,1+Math.floor(lv/3));
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,85+lv*14+player.damageBonus,430,24,2.8,"fireball",110+lv*10);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,90+lv*15+player.damageBonus,430,24,2.8,"fireball",110+lv*10);
     w.cooldown=Math.max(.7,1.8-lv*.1);
   }else if(w.type==="shockwave"){
     const radius=180+lv*20+Math.min(Math.max(player.range-520,0),500)*.35;
-    const damage=45+lv*18+player.damageBonus*.45;
-    const knockback=50+lv*1.2;
+    const damage=60+lv*18+player.damageBonus*.45;
+    const knockback=50+lv*5;
     let hit=false;
     for(const e of enemies){
       const dx=e.x-player.x, dy=e.y-player.y;
@@ -333,7 +333,7 @@ function shootWeapon(w){
       const target=targets[i%targets.length];
       const base=Math.atan2(target.y-player.y,target.x-player.x);
       const spread=(i-(count-1)/2)*.13;
-      addBullet(base+spread,100+lv*20+player.damageBonus,560,17,3.3,"boomerang");
+      addBullet(base+spread,87+lv*20+player.damageBonus,560,17,3.3,"boomerang");
       const b=bullets[bullets.length-1];
       b.returning=false;
       b.outTime=.9;
@@ -341,7 +341,7 @@ function shootWeapon(w){
       b.hitOut=[];
       b.hitBack=[];
     }
-    w.cooldown=Math.max(.7,1.5-lv*.08);
+    w.cooldown=Math.max(.9,1.5-lv*.08);
   }
 }
 function shoot(dt){

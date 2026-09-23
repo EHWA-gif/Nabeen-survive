@@ -280,16 +280,16 @@ function spawnEnemy(){
   // 기존 레벨 기반 수치는 그대로 유지하고, 시간 배율만 추가한다.
   const difficulty=1+Math.pow(elapsed/300,3.2);
   const hpScale=difficulty;
-  const speedScale=1+(difficulty-1)*0.17;
+  const speedScale=1+(difficulty-1)*0.13;
   const damageScale=1+(difficulty-1)*0.13;
 
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
     const hp=160*hpScale;
-    e={x,y,r:18,hp,maxHp:hp,speed:45*speedScale,damage:900*damageScale,elite:true};
+    e={x,y,r:18,hp,maxHp:hp,speed:45*speedScale,damage:800*damageScale,elite:true};
   }else{
     const hp=140*hpScale;
-    e={x,y,r:11+Math.random()*4,hp,maxHp:hp,speed:40*speedScale,damage:600*damageScale,elite:false};
+    e={x,y,r:11+Math.random()*4,hp,maxHp:hp,speed:40*speedScale,damage:500*damageScale,elite:false};
   }
   enemies.push(e);
 }

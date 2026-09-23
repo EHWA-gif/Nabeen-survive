@@ -146,12 +146,23 @@ function updateDamageMeter(){
   const names=["magic","shotgun","fireball","shockwave","boomerang"];
   const ids=["dmgMagic","dmgShotgun","dmgFireball","dmgShockwave","dmgBoomerang"];
   let total=0;
+
   for(let i=0;i<names.length;i++){
-    const value=damageMeter[names[i]]; total+=value;
-    document.getElementById(ids[i]).textContent=Math.floor(value).toLocaleString();
+    const value=damageMeter[names[i]];
+    total+=value;
+
+    const weapon=weapons.find(w=>w.type===names[i]);
+    const lv=weapon ? weapon.level : 0;
+
+    document.getElementById(ids[i]).textContent=
+      `Lv.${lv}  ${Math.floor(value).toLocaleString()}`;
   }
-  document.getElementById("dmgTotal").textContent=Math.floor(total).toLocaleString();
-  document.getElementById("dmgDps").textContent=(elapsed>0?(total/elapsed).toFixed(1):"0.0");
+
+  document.getElementById("dmgTotal").textContent=
+    Math.floor(total).toLocaleString();
+
+  document.getElementById("dmgDps").textContent=
+    (elapsed>0?(total/elapsed).toFixed(1):"0.0");
 }
 
 const MAGNET_DROP_CHANCE=0.008; // 적 처치 시 자석 아이템 드랍 확률 1.5%

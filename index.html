@@ -269,8 +269,8 @@ function spawnEnemy(){
   // 기존 레벨 기반 수치는 그대로 유지하고, 시간 배율만 추가한다.
   const difficulty=1+Math.pow(elapsed/300,3.2);
   const hpScale=difficulty;
-  const speedScale=1+(difficulty-1)*0.3;
-  const damageScale=1+(difficulty-1)*0.1;
+  const speedScale=1+(difficulty-1)*0.17;
+  const damageScale=1+(difficulty-1)*0.13;
 
   let e;
   if(t<.10+Math.min(elapsed/2400,.16)){
@@ -343,11 +343,11 @@ function shootWeapon(w){
       const target=targets[i%targets.length];
       const base=Math.atan2(target.y-player.y,target.x-player.x);
       const spread=(i-(count-1)/2)*.13;
-      addBullet(base+spread,100+lv*20+player.damageBonus,560,17,3.3,"boomerang");
+      addBullet(base+spread,70+lv*20+player.damageBonus,560,17,3.3,"boomerang");
       const b=bullets[bullets.length-1];
       b.returning=false;
       b.outTime=.9;
-      b.returnSpeed=760;
+      b.returnSpeed=740;
       b.hitOut=[];
       b.hitBack=[];
     }
@@ -449,7 +449,7 @@ function defeatEnemy(e){
     }
     boss=null;
     document.getElementById("bossHud").style.display="none";
-    player.hp=Math.min(player.maxHp,player.hp+Math.ceil(player.maxHp*.75));
+    player.hp=Math.min(player.maxHp,player.hp+Math.ceil(player.maxHp*.40));
     showMessage("🏆 보스 처치! 대량의 경험치를 획득했습니다!");
   }else{
     kills++; dropGem(e);

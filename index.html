@@ -449,7 +449,7 @@ function shootWeapon(w){
     const count=1+Math.floor((lv-1)/5);
     const radius=115+lv*15;
     const duration=2.0+lv*.12;
-    const damage=15+lv*10+player.damageBonus*.35;
+    const damage=10+lv*8+player.damageBonus*.35;
     const pull=70+lv*12;
 
     // 플레이어 바로 밑에 블랙홀이 생겨 적이 플레이어에게 몰려오는 현상을 방지한다.
@@ -751,7 +751,7 @@ function update(dt){
         const safeDx=e.x-player.x;
         const safeDy=e.y-player.y;
         const safeDist=Math.hypot(safeDx,safeDy);
-        const minPlayerDist=player.r+e.r+10;
+        const minPlayerDist=player.r+e.r+1;
         if(safeDist<minPlayerDist){
           const sx=safeDist>0?safeDx/safeDist:1;
           const sy=safeDist>0?safeDy/safeDist:0;
@@ -783,7 +783,7 @@ function update(dt){
   elapsed<300 ? 8 :
   elapsed<360 ? 9 :
   10;;
-    for(let i=0;i<count && enemies.length<600;i++)spawnEnemy();
+    for(let i=0;i<count && enemies.length<550;i++)spawnEnemy();
   }
 
   shoot(dt);

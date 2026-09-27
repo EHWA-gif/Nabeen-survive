@@ -751,13 +751,6 @@ function update(dt){
         const safeDx=e.x-player.x;
         const safeDy=e.y-player.y;
         const safeDist=Math.hypot(safeDx,safeDy);
-        const minPlayerDist=player.r+e.r+1;
-        if(safeDist<minPlayerDist){
-          const sx=safeDist>0?safeDx/safeDist:1;
-          const sy=safeDist>0?safeDy/safeDist:0;
-          e.x=player.x+sx*minPlayerDist;
-          e.y=player.y+sy*minPlayerDist;
-        }
       }
     }
 
@@ -777,11 +770,13 @@ function update(dt){
   if(spawnTimer<=0){
     spawnTimer=interval;
     const count=elapsed<30 ? 2 :
-  elapsed<90 ? 4 :
-  elapsed<180 ? 5 :
-  elapsed<240 ? 7 :
-  elapsed<300 ? 8 :
-  elapsed<360 ? 9 :
+  elapsed<90 ? 3 :
+  elapsed<180 ? 4 :
+  elapsed<300 ? 5 :
+  elapsed<530 ? 6 :
+  elapsed<700 ? 7 :
+  elapsed<950 ? 8 :
+  elapsed<1150 ? 9 :
   10;;
     for(let i=0;i<count && enemies.length<550;i++)spawnEnemy();
   }

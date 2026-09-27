@@ -194,7 +194,7 @@ function dropGem(enemy){
     x:enemy.x,
     y:enemy.y,
     r:enemy.elite?7:5,
-    value:enemy.elite?4:1
+    value:enemy.elite?6:2
   });
 
   if(Math.random()<MAGNET_DROP_CHANCE){
@@ -317,9 +317,9 @@ function spawnEnemy(){
 
   // 생존 시간에 따라 적의 능력치만 점진적으로 증가한다.
   // 기존 레벨 기반 수치는 그대로 유지하고, 시간 배율만 추가한다.
-  const difficulty=1+Math.pow(elapsed/300,3.2);
+  const difficulty=1+Math.pow(elapsed/300,2.8);
   const hpScale=difficulty;
-  const speedScale=1+(difficulty-1)*0.07;
+  const speedScale=1+(difficulty-1)*0.05;
   const damageScale=1+(difficulty-1)*0.05;
 
   let e;

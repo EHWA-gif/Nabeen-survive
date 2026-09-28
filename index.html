@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nabeen survivor 1.4</title>
+<title>Nabeen survivor 1.3</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b12;font-family:Arial,"Malgun Gothic",sans-serif;color:#fff}
@@ -18,6 +18,10 @@ canvas{display:block;width:100%;height:100%;background:#101827}
 #xpFill{background:#49d7ff}
 #hpBar{width:180px}#hpFill{background:#ef476f}
 #stats{margin-top:7px;font-size:14px;opacity:.95}
+#randomEventHud{position:absolute;left:50%;top:18px;transform:translateX(-50%);display:none;z-index:6;pointer-events:none;background:rgba(8,12,22,.88);border:2px solid #58d5ff;border-radius:14px;padding:9px 18px;text-align:center;min-width:230px;box-shadow:0 6px 22px #0008;text-shadow:0 2px 3px #000}
+#randomEventHud .event-title{font-size:17px;font-weight:bold;white-space:nowrap}
+#randomEventHud .event-time{margin-top:3px;font-size:13px;color:#c7d0df}
+@media(max-width:700px){#randomEventHud{top:10px;min-width:190px;padding:7px 12px}#randomEventHud .event-title{font-size:14px}}
 #centerMsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:auto;z-index:10}
 .panel{position:relative;z-index:11;background:rgba(8,12,22,.88);border:1px solid #42506b;border-radius:16px;padding:28px 34px;text-align:center;box-shadow:0 15px 50px #0009}
 .panel h1{margin:0 0 10px;font-size:38px}.panel p{margin:8px 0;color:#c7d0df}
@@ -60,6 +64,7 @@ button:hover{filter:brightness(1.1)}
   <div id="stats">처치 0 · 생존 0:00 · 무기 1</div>
 </div>
 <div id="bossHud"><div id="bossName">👹 대왕 나룡이</div><div id="bossBar"><div id="bossFill"></div></div></div>
+<div id="randomEventHud"><div class="event-title" id="randomEventTitle"></div><div class="event-time" id="randomEventTime"></div></div>
 <div id="damageMeter">
   <h3>⚔️ 실시간 딜미터기</h3>
   <div class="dm-row"><span>🔮 나쫀쿠</span><b id="dmgMagic">0</b></div>
@@ -73,7 +78,7 @@ button:hover{filter:brightness(1.1)}
 </div>
 <div id="centerMsg">
   <div class="panel">
-    <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v1.4</small></h1>
+    <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v1.3</small></h1>
     <p>WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
     <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 듀아악!</p>
     <button id="startBtn">게임 시작</button>
@@ -120,6 +125,8 @@ let blackholes=[];
 let damageMeter={magic:0,shotgun:0,fireball:0,shockwave:0,boomerang:0,blackhole:0};
 let boss=null, nextBossTime=300, bossAttackTimer=0, bossWaveTimer=0;
 let treasureChest=null, treasureChoices=[];
+let randomEvent={active:false,type:null,time:0,duration:0,nextTime:60};
+let randomEventGemMultiplier=1;
 
 function resize(){
   const r=gameEl.getBoundingClientRect();
@@ -141,6 +148,9 @@ function startGame(){
   enemies=[];bullets=[];gems=[];magnetItems=[];particles=[];
   boss=null; nextBossTime=300; bossAttackTimer=3; bossWaveTimer=5;
   treasureChest=null; treasureChoices=[];
+  randomEvent={active:false,type:null,time:0,duration:0,nextTime:60+Math.random()*30};
+  randomEventGemMultiplier=1;
+  updateRandomEventHud();
   document.getElementById("bossHud").style.display="none";
   weapons=[{type:"magic",level:1,cooldown:0},{type:"shotgun",level:0,cooldown:0},{type:"fireball",level:0,cooldown:0},{type:"shockwave",level:0,cooldown:0},{type:"boomerang",level:0,cooldown:0},{type:"blackhole",level:0,cooldown:0}];
   shockwaveEffects=[];
@@ -210,7 +220,7 @@ function dropGem(enemy){
 function collectAllGems(){
   const collected=gems.map(g=>({x:g.x,y:g.y,value:g.value,r:g.r}));
   let gained=0;
-  for(const g of collected) gained+=g.value;
+  for(const g of collected) gained+=g.value*randomEventGemMultiplier;
 
   magnetEffect={
     active:true,
@@ -317,9 +327,9 @@ function spawnEnemy(){
 
   // 생존 시간에 따라 적의 능력치만 점진적으로 증가한다.
   // 기존 레벨 기반 수치는 그대로 유지하고, 시간 배율만 추가한다.
-  const difficulty=1+Math.pow(elapsed/300,2.8);
+  const difficulty=1+Math.pow(elapsed/300,3.2);
   const hpScale=difficulty;
-  const speedScale=1+(difficulty-1)*0.05;
+  const speedScale=1+(difficulty-1)*0.07;
   const damageScale=1+(difficulty-1)*0.05;
 
   let e;
@@ -448,11 +458,10 @@ function shootWeapon(w){
     const target=targets[0];
     const count=1+Math.floor((lv-1)/5);
     const radius=115+lv*15;
-    const duration=2.2+lv*.12;
-    const damage=10+lv*9+player.damageBonus*.35;
+    const duration=3.2+lv*.35;
+    const damage=24+lv*14+player.damageBonus*.35;
     const pull=70+lv*12;
 
-    // 플레이어 바로 밑에 블랙홀이 생겨 적이 플레이어에게 몰려오는 현상을 방지한다.
     const minCenterDist=player.r+radius*.62+100;
     let tx=target.x, ty=target.y;
     const tdx=tx-player.x, tdy=ty-player.y;
@@ -469,8 +478,8 @@ function shootWeapon(w){
       const ox=Math.cos(a)*35*i;
       const oy=Math.sin(a)*35*i;
       blackholes.push({
-        x:tx+ox,
-        y:ty+oy,
+        x:target.x+ox,
+        y:target.y+oy,
         r:radius,
         life:duration,
         maxLife:duration,
@@ -668,8 +677,72 @@ function defeatEnemy(e){
   enemies.splice(idx,1);
 }
 
+function updateRandomEventHud(){
+  const hud=document.getElementById("randomEventHud");
+  const title=document.getElementById("randomEventTitle");
+  const time=document.getElementById("randomEventTime");
+  if(!hud||!title||!time)return;
+
+  if(!randomEvent.active){
+    hud.style.display="none";
+    return;
+  }
+
+  const names={
+    gem:"💎 경험치 2배",
+    raid:"👹 적 스폰 증가",
+    berserk:"⚡ 적 광폭화",
+    magnet:"🧲 자석 폭풍"
+  };
+  title.textContent=names[randomEvent.type]||"✨ 랜덤 이벤트";
+  time.textContent=`남은 시간 ${Math.max(0,randomEvent.time).toFixed(1)}초`;
+  hud.style.display="block";
+}
+
+function startRandomEvent(){
+  if(randomEvent.active)return;
+
+  const events=["gem","raid","berserk","magnet"];
+  const type=events[Math.floor(Math.random()*events.length)];
+  randomEvent.active=true;
+  randomEvent.type=type;
+  randomEvent.time=15;
+  randomEvent.duration=15;
+  randomEventGemMultiplier=1;
+  updateRandomEventHud();
+
+  if(type==="gem"){
+    randomEventGemMultiplier=2;
+    showMessage("💎 젬 폭풍! 15초 동안 경험치 2배!");
+  }else if(type==="raid"){
+    showMessage("👹 적의 습격! 15초 동안 적이 몰려옵니다!");
+  }else if(type==="berserk"){
+    showMessage("⚡ 광폭화! 15초 동안 적 이동속도 증가!");
+  }else if(type==="magnet"){
+    showMessage("🧲 자석 폭풍! 15초 동안 모든 젬이 끌려옵니다!");
+  }
+}
+
+function updateRandomEvent(dt){
+  if(randomEvent.active){
+    randomEvent.time-=dt;
+    if(randomEvent.time<=0){
+      randomEvent.active=false;
+      randomEvent.type=null;
+      randomEventGemMultiplier=1;
+      randomEvent.nextTime=elapsed+60+Math.random()*30;
+      updateRandomEventHud();
+      showMessage("✨ 랜덤 이벤트 종료!");
+    }
+  }else if(elapsed>=randomEvent.nextTime){
+    startRandomEvent();
+  }
+  updateRandomEventHud();
+}
+
 function update(dt){
   elapsed+=dt; hitCooldown=Math.max(0,hitCooldown-dt);
+  updateRandomEvent(dt);
   for(let i=shockwaveEffects.length-1;i>=0;i--){
     const fx=shockwaveEffects[i];
     fx.life-=dt;
@@ -746,11 +819,6 @@ function update(dt){
         const strength=bh.pull*(1-d/Math.max(1,bh.r));
         e.x+=nx*strength*dt;
         e.y+=ny*strength*dt;
-
-        // 블랙홀의 흡인력이 플레이어와의 충돌까지 유발하지 않도록 최소 거리를 유지한다.
-        const safeDx=e.x-player.x;
-        const safeDy=e.y-player.y;
-        const safeDist=Math.hypot(safeDx,safeDy);
       }
     }
 
@@ -770,7 +838,7 @@ function update(dt){
   if(spawnTimer<=0){
     spawnTimer=interval;
     const count=elapsed<30 ? 2 :
-  elapsed<90 ? 3 :
+   elapsed<90 ? 3 :
   elapsed<180 ? 4 :
   elapsed<300 ? 5 :
   elapsed<530 ? 6 :
@@ -778,7 +846,8 @@ function update(dt){
   elapsed<950 ? 8 :
   elapsed<1150 ? 9 :
   10;;
-    for(let i=0;i<count && enemies.length<550;i++)spawnEnemy();
+    const eventCountMultiplier=randomEvent.active&&randomEvent.type==="raid"?2:1;
+    for(let i=0;i<count*eventCountMultiplier && enemies.length<550;i++)spawnEnemy();
   }
 
   shoot(dt);
@@ -786,7 +855,8 @@ function update(dt){
   for(const e of enemies){
     const a=Math.atan2(player.y-e.y,player.x-e.x);
     // 보스도 적 배열에 들어가지만, 일반 적보다 확실히 빠르게 추격한다.
-    const moveSpeed=e.boss ? e.speed*(e.phase===2?1.18:1) : e.speed;
+    const eventSpeedMultiplier=randomEvent.active&&randomEvent.type==="berserk"?1.35:1;
+    const moveSpeed=(e.boss ? e.speed*(e.phase===2?1.18:1) : e.speed)*eventSpeedMultiplier;
     e.x+=Math.cos(a)*moveSpeed*dt;
     e.y+=Math.sin(a)*moveSpeed*dt;
     if(Math.hypot(player.x-e.x,player.y-e.y)<player.r+e.r) hurtPlayer(e.damage*dt);
@@ -932,12 +1002,17 @@ function update(dt){
 
   for(let i=gems.length-1;i>=0;i--){
     const g=gems[i],d=Math.hypot(player.x-g.x,player.y-g.y);
-    if(d<105){
+    const eventMagnet=randomEvent.active&&randomEvent.type==="magnet";
+    if(d<105 || eventMagnet){
       const a=Math.atan2(player.y-g.y,player.x-g.x);
-      g.x+=Math.cos(a)*260*dt;
-      g.y+=Math.sin(a)*260*dt;
+      const speed=eventMagnet?620:260;
+      g.x+=Math.cos(a)*speed*dt;
+      g.y+=Math.sin(a)*speed*dt;
     }
-    if(d<player.r+g.r+5){addXp(g.value);gems.splice(i,1);}
+    if(Math.hypot(player.x-g.x,player.y-g.y)<player.r+g.r+5){
+      addXp(g.value*randomEventGemMultiplier);
+      gems.splice(i,1);
+    }
   }
 
   for(let i=particles.length-1;i>=0;i--){

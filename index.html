@@ -34,6 +34,11 @@ button:hover{filter:brightness(1.1)}
 .card h3{margin:0 0 8px;font-size:18px}.card p{margin:0;color:#c4ccda;font-size:14px;line-height:1.45}
 #message{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:#000b;padding:9px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none}
 #damageMeter{position:absolute;right:18px;top:14px;width:220px;padding:12px 14px;background:rgba(8,12,22,.82);border:1px solid #42506b;border-radius:12px;box-shadow:0 8px 24px #0006;pointer-events:none;font-size:13px;line-height:1.55}
+#ultimateHud{position:absolute;left:18px;bottom:18px;z-index:7;pointer-events:none;background:rgba(8,12,22,.88);border:2px solid #ffd54a;border-radius:14px;padding:10px 15px;min-width:155px;text-align:center;box-shadow:0 6px 22px #0008;text-shadow:0 2px 3px #000}
+#ultimateHud .ultimate-title{font-size:16px;font-weight:900}
+#ultimateHud .ultimate-key{margin-top:3px;font-size:12px;color:#c7d0df}
+#ultimateHud.used{border-color:#596273;opacity:.62}
+@media(max-width:700px){#ultimateHud{left:10px;bottom:10px;padding:8px 11px;min-width:135px}#ultimateHud .ultimate-title{font-size:14px}}
 #damageMeter h3{margin:0 0 7px;font-size:15px}
 #blackholeHint{color:#b88cff}
 #bossHud{position:absolute;left:50%;top:72px;transform:translateX(-50%);width:min(560px,55vw);display:none;z-index:5;pointer-events:none;text-align:center;text-shadow:0 2px 3px #000}
@@ -65,6 +70,7 @@ button:hover{filter:brightness(1.1)}
 </div>
 <div id="bossHud"><div id="bossName">👹 대왕 나룡이</div><div id="bossBar"><div id="bossFill"></div></div></div>
 <div id="randomEventHud"><div class="event-title" id="randomEventTitle"></div><div class="event-time" id="randomEventTime"></div></div>
+<div id="ultimateHud"><div class="ultimate-title" id="ultimateTitle">💥 아아앜 READY</div><div class="ultimate-key">SPACE</div></div>
 <div id="damageMeter">
   <h3>⚔️ 실시간 딜미터기</h3>
   <div class="dm-row"><span>🔮 나쫀쿠</span><b id="dmgMagic">0</b></div>
@@ -122,6 +128,9 @@ let upgrades=[];
 let weapons=[];
 let shockwaveEffects=[];
 let blackholes=[];
+let ultimateUsed=false;
+let ultimateEffects=[];
+let ultimateFlash=0;
 let damageMeter={magic:0,shotgun:0,fireball:0,shockwave:0,boomerang:0,blackhole:0};
 let boss=null, nextBossTime=300, bossAttackTimer=0, bossWaveTimer=0;
 let treasureChest=null, treasureChoices=[];
@@ -140,6 +149,10 @@ addEventListener("keydown",e=>{
   keys[e.key.toLowerCase()]=true;
   if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) e.preventDefault();
   if((e.key.toLowerCase()==="r")&&!running) startGame();
+  if(e.code==="Space" && running && !paused){
+    e.preventDefault();
+    useUltimate();
+  }
 });
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
@@ -155,6 +168,10 @@ function startGame(){
   weapons=[{type:"magic",level:1,cooldown:0},{type:"shotgun",level:0,cooldown:0},{type:"fireball",level:0,cooldown:0},{type:"shockwave",level:0,cooldown:0},{type:"boomerang",level:0,cooldown:0},{type:"blackhole",level:0,cooldown:0}];
   shockwaveEffects=[];
   blackholes=[];
+  ultimateUsed=false;
+  ultimateEffects=[];
+  ultimateFlash=0;
+  updateUltimateHud();
   damageMeter={magic:0,shotgun:0,fireball:0,shockwave:0,boomerang:0,blackhole:0};
   updateDamageMeter();
   player={
@@ -167,6 +184,64 @@ function startGame(){
   document.getElementById("upgrade").style.display="none";
   last=performance.now(); requestAnimationFrame(loop);
   showMessage("생존을 시작하세요!");
+}
+
+function updateUltimateHud(){
+  const hud=document.getElementById("ultimateHud");
+  const title=document.getElementById("ultimateTitle");
+  if(!hud||!title)return;
+  if(ultimateUsed){
+    title.textContent="💥 아아앜 USED";
+    hud.classList.add("used");
+  }else{
+    title.textContent="💥 아아앜 READY";
+    hud.classList.remove("used");
+  }
+}
+
+function useUltimate(){
+  if(ultimateUsed || !running || paused || !player)return;
+  ultimateUsed=true;
+  updateUltimateHud();
+
+  const radius=550;
+  const normalDamage=999999;
+  const targets=[...enemies];
+
+  for(const e of targets){
+    if(e.defeated || !enemies.includes(e))continue;
+    const d=Math.hypot(player.x-e.x,player.y-e.y);
+    if(d<=radius+e.r){
+      let dealt;
+      if(e.boss){
+        dealt=Math.min(e.hp,e.hp*.15);
+      }else if(e.elite){
+        dealt=Math.min(e.hp,e.hp*.90);
+      }else{
+        dealt=Math.min(e.hp,normalDamage);
+      }
+      e.hp-=dealt;
+      recordDamage("shockwave",dealt);
+      if(e.boss)e.hitFlash=.22;
+      if(e.hp<=0)defeatEnemy(e);
+    }
+  }
+
+  ultimateEffects.push({x:player.x,y:player.y,r:0,maxRadius:radius,life:.55,maxLife:.55});
+  ultimateFlash=.18;
+
+  for(let i=0;i<90;i++){
+    const a=Math.random()*Math.PI*2;
+    const sp=120+Math.random()*520;
+    particles.push({
+      x:player.x+Math.cos(a)*20,
+      y:player.y+Math.sin(a)*20,
+      vx:Math.cos(a)*sp,
+      vy:Math.sin(a)*sp,
+      life:.45+Math.random()*.35
+    });
+  }
+  showMessage("💥 필살기 발동! 주변의 적을 쓸어버립니다!");
 }
 
 function recordDamage(type, amount){
@@ -751,6 +826,14 @@ function update(dt){
   }
   updateDamageMeter();
 
+  ultimateFlash=Math.max(0,ultimateFlash-dt);
+  for(let i=ultimateEffects.length-1;i>=0;i--){
+    const fx=ultimateEffects[i];
+    fx.life-=dt;
+    fx.r=fx.maxRadius*(1-fx.life/fx.maxLife);
+    if(fx.life<=0)ultimateEffects.splice(i,1);
+  }
+
   // 플레이어는 실제 월드 좌표에서 이동한다.
   let dx=(keys["d"]||keys["arrowright"]?1:0)-(keys["a"]||keys["arrowleft"]?1:0);
   let dy=(keys["s"]||keys["arrowdown"]?1:0)-(keys["w"]||keys["arrowup"]?1:0);
@@ -1058,6 +1141,26 @@ function draw(){
     ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
   }
 
+
+  for(const fx of ultimateEffects){
+    const x=sx(fx.x),y=sy(fx.y);
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,fx.life/fx.maxLife)*.85;
+    ctx.beginPath();ctx.arc(x,y,fx.r,0,Math.PI*2);
+    ctx.strokeStyle="#ffe082";ctx.lineWidth=12;ctx.shadowColor="#ffd54a";ctx.shadowBlur=28;ctx.stroke();
+    ctx.globalAlpha*=.65;
+    ctx.beginPath();ctx.arc(x,y,Math.max(0,fx.r-18),0,Math.PI*2);
+    ctx.strokeStyle="#fff7cf";ctx.lineWidth=4;ctx.stroke();
+    ctx.restore();
+  }
+
+  if(ultimateFlash>0){
+    ctx.save();
+    ctx.globalAlpha=ultimateFlash/.18*.18;
+    ctx.fillStyle="#fff4c2";
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
 
   for(const bh of blackholes){
     const x=sx(bh.x),y=sy(bh.y);

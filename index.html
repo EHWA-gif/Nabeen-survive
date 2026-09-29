@@ -55,6 +55,15 @@ button:hover{filter:brightness(1.1)}
 .treasure-card h3{margin:0 0 12px;font-size:20px;}
 .treasure-card p{margin:0;color:#cbd6ea;line-height:1.5;}
 @media(max-width:700px){#treasureCards{grid-template-columns:1fr}.treasure-card{min-height:auto}}
+#audioControls{position:absolute;right:18px;top:300px;z-index:20;pointer-events:auto;background:rgba(8,12,22,.88);border:1px solid #42506b;border-radius:12px;padding:10px 12px;width:220px;box-shadow:0 8px 24px #0006;text-shadow:0 2px 3px #000}
+#audioControls .audio-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+#audioControls .audio-row:last-child{margin-bottom:0}
+#audioControls label{width:38px;color:#c7d0df}
+#audioControls input[type="range"]{flex:1;min-width:0;accent-color:#58d5ff}
+#audioMute{border:1px solid #465779;background:#172033;color:#fff;border-radius:8px;padding:5px 8px;margin:0;font-size:12px;cursor:pointer}
+#audioMute.muted{background:#3a2028;border-color:#8b4b59;color:#ffb4c4}
+#audioValue{width:34px;text-align:right;color:#8fa3c7;font-size:11px}
+@media(max-width:700px){#audioControls{right:10px;top:185px;width:190px;padding:8px 10px}}
 </style>
 </head>
 <body>
@@ -82,11 +91,17 @@ button:hover{filter:brightness(1.1)}
   <div class="dm-row dm-total"><span>TOTAL</span><b id="dmgTotal">0</b></div>
   <div class="dm-row dm-dps"><span>DPS</span><b id="dmgDps">0</b></div>
 </div>
+<div id="audioControls">
+  <div class="audio-row"><label>전체</label><input id="masterVolume" type="range" min="0" max="100" value="70"><span id="audioValue">70%</span></div>
+  <div class="audio-row"><label>BGM</label><input id="bgmVolume" type="range" min="0" max="100" value="35"></div>
+  <div class="audio-row"><label>효과음</label><input id="sfxVolume" type="range" min="0" max="100" value="80"></div>
+  <div class="audio-row"><button id="audioMute" type="button">🔊 음소거</button></div>
+</div>
 <div id="centerMsg">
   <div class="panel">
     <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v1.4</small></h1>
     <p>WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
-    <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 듀아악!</p>
+    <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 현재 배경음악에 문제가 있으니 bgm은 0으로 해주세요!</p>
     <button id="startBtn">게임 시작</button>
   </div>
 </div>
@@ -137,6 +152,92 @@ let treasureChest=null, treasureChoices=[];
 let randomEvent={active:false,type:null,time:0,duration:0,nextTime:60};
 let randomEventGemMultiplier=1;
 
+// ===== Audio system (추가 기능: 기존 게임 수치/로직은 변경하지 않음) =====
+let audioCtx=null, masterGain=null, bgmGain=null, sfxGain=null;
+let bgmNodes=[], audioMuted=false;
+let masterVolume=.70, bgmVolume=.35, sfxVolume=.80, lastEnemySfxTime=0;
+
+function initAudio(){
+  if(audioCtx){if(audioCtx.state==="suspended")audioCtx.resume();return;}
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  audioCtx=new AC();
+  masterGain=audioCtx.createGain();bgmGain=audioCtx.createGain();sfxGain=audioCtx.createGain();
+  bgmGain.connect(masterGain);sfxGain.connect(masterGain);masterGain.connect(audioCtx.destination);
+  updateAudioGains();
+}
+function updateAudioGains(){
+  if(!masterGain)return;
+  masterGain.gain.value=audioMuted?0:masterVolume;
+  bgmGain.gain.value=bgmVolume;sfxGain.gain.value=sfxVolume;
+  const v=document.getElementById("audioValue");if(v)v.textContent=`${Math.round(masterVolume*100)}%`;
+}
+function setAudioParam(param,value){
+  value=Math.max(0,Math.min(1,value));
+  if(param==="master")masterVolume=value;
+  else if(param==="bgm")bgmVolume=value;
+  else if(param==="sfx")sfxVolume=value;
+  initAudio();updateAudioGains();
+}
+function tone(freq,duration,type="sine",volume=.08,when=0,slideTo=null){
+  if(!audioCtx||audioMuted)return;
+  const t=audioCtx.currentTime+when,osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+  osc.type=type;osc.frequency.setValueAtTime(Math.max(20,freq),t);
+  if(slideTo!==null)osc.frequency.exponentialRampToValueAtTime(Math.max(20,slideTo),t+duration);
+  gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(Math.max(.0001,volume),t+.008);gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
+  osc.connect(gain);gain.connect(sfxGain);osc.start(t);osc.stop(t+duration+.02);
+}
+function noise(duration=.12,volume=.08,when=0,filterFreq=1800){
+  if(!audioCtx||audioMuted)return;
+  const n=Math.max(1,Math.floor(audioCtx.sampleRate*duration)),b=audioCtx.createBuffer(1,n,audioCtx.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
+  const src=audioCtx.createBufferSource(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain(),t=audioCtx.currentTime+when;
+  f.type="bandpass";f.frequency.value=filterFreq;f.Q.value=.8;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0001,volume),t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+  src.buffer=b;src.connect(f);f.connect(g);g.connect(sfxGain);src.start(t);src.stop(t+duration+.02);
+}
+function playSfx(name){
+  initAudio();if(!audioCtx||audioMuted)return;
+  switch(name){
+    case "start":tone(330,.10,"sine",.07,0,440);tone(440,.12,"sine",.08,.10,660);tone(660,.18,"sine",.09,.22,880);break;
+    case "levelup":tone(440,.08,"sine",.08);tone(554,.08,"sine",.08,.08);tone(659,.10,"sine",.09,.16);tone(880,.20,"sine",.10,.26);break;
+    case "upgrade":tone(380,.08,"triangle",.07);tone(520,.12,"triangle",.08,.08,700);break;
+    case "kill":tone(180,.055,"square",.035,0,90);break;
+    case "eliteKill":noise(.08,.07,0,1200);tone(150,.10,"sawtooth",.06,0,80);tone(240,.12,"triangle",.05,.08,120);break;
+    case "hit":noise(.09,.075,0,900);tone(110,.07,"square",.055,0,70);break;
+    case "gem":tone(880,.055,"sine",.045);tone(1175,.08,"sine",.05,.055);break;
+    case "treasure":tone(392,.10,"triangle",.07);tone(523,.10,"triangle",.07,.10);tone(659,.12,"triangle",.08,.20);tone(988,.28,"sine",.10,.32);break;
+    case "boss":tone(110,.35,"sawtooth",.10,0,55);tone(82,.45,"sawtooth",.08,.28,45);noise(.25,.08,.05,500);break;
+    case "berserk":tone(180,.10,"square",.07);tone(260,.10,"square",.08,.10,380);tone(520,.16,"sawtooth",.07,.20,760);break;
+    case "bossKill":noise(.22,.10,0,700);tone(100,.18,"sawtooth",.09,0,45);tone(260,.14,"triangle",.08,.18,520);tone(780,.30,"sine",.10,.32,1040);break;
+    case "blackhole":tone(180,.55,"sine",.08,0,55);tone(95,.65,"triangle",.06,.10,35);noise(.20,.035,.18,350);break;
+    case "ultimate":tone(130,.35,"sawtooth",.08,0,520);tone(520,.20,"triangle",.08,.28,1100);noise(.22,.12,.43,900);tone(90,.45,"sawtooth",.12,.43,35);break;
+    case "eventEnd":tone(660,.08,"sine",.06);tone(523,.10,"sine",.06,.08);break;
+    case "gameover":tone(440,.16,"sine",.07,0,330);tone(330,.18,"sine",.07,.17,220);tone(220,.28,"sine",.08,.36,110);break;
+  }
+}
+function startBgm(){
+  initAudio();if(!audioCtx||bgmNodes.length)return;
+  const master=audioCtx.createGain(),osc1=audioCtx.createOscillator(),osc2=audioCtx.createOscillator(),lfo=audioCtx.createOscillator(),lg=audioCtx.createGain(),now=audioCtx.currentTime;
+  master.gain.value=.20;master.connect(bgmGain);
+  osc1.type="triangle";osc2.type="sine";lfo.type="sine";osc1.frequency.value=110;osc2.frequency.value=164.81;lfo.frequency.value=.08;lg.gain.value=3;
+  lfo.connect(lg);lg.connect(osc2.frequency);osc1.connect(master);osc2.connect(master);
+  osc1.start(now);osc2.start(now);lfo.start(now);bgmNodes=[osc1,osc2,lfo,master];
+}
+function stopBgm(){
+  if(!bgmNodes.length||!audioCtx)return;
+  const nodes=bgmNodes;bgmNodes=[];const t=audioCtx.currentTime,master=nodes[3];
+  master.gain.cancelScheduledValues(t);master.gain.setValueAtTime(master.gain.value,t);master.gain.exponentialRampToValueAtTime(.0001,t+.18);
+  setTimeout(()=>nodes.forEach(n=>{try{n.stop()}catch{}try{n.disconnect()}catch{}}),220);
+}
+function initAudioControls(){
+  const m=document.getElementById("masterVolume"),b=document.getElementById("bgmVolume"),s=document.getElementById("sfxVolume"),mute=document.getElementById("audioMute");
+  if(m)m.addEventListener("input",()=>setAudioParam("master",Number(m.value)/100));
+  if(b)b.addEventListener("input",()=>setAudioParam("bgm",Number(b.value)/100));
+  if(s)s.addEventListener("input",()=>setAudioParam("sfx",Number(s.value)/100));
+  if(mute)mute.addEventListener("click",()=>{audioMuted=!audioMuted;mute.textContent=audioMuted?"🔇 음소거 해제":"🔊 음소거";mute.classList.toggle("muted",audioMuted);initAudio();updateAudioGains();});
+}
+initAudioControls();
+
 function resize(){
   const r=gameEl.getBoundingClientRect();
   const d=Math.min(devicePixelRatio||1,2);
@@ -158,6 +259,7 @@ addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
 function startGame(){
   running=true; paused=false; elapsed=0;kills=0;level=1;xp=0;xpNeed=8;weaponLevel=1;
+    document.getElementById("audioControls").style.display="none";
   enemies=[];bullets=[];gems=[];magnetItems=[];particles=[];
   boss=null; nextBossTime=300; bossAttackTimer=3; bossWaveTimer=5;
   treasureChest=null; treasureChoices=[];
@@ -183,6 +285,9 @@ function startGame(){
   document.getElementById("centerMsg").style.display="none";
   document.getElementById("upgrade").style.display="none";
   last=performance.now(); requestAnimationFrame(loop);
+  initAudio();
+  startBgm();
+  playSfx("start");
   showMessage("생존을 시작하세요!");
 }
 
@@ -203,6 +308,7 @@ function useUltimate(){
   if(ultimateUsed || !running || paused || !player)return;
   ultimateUsed=true;
   updateUltimateHud();
+  playSfx("ultimate");
 
   const radius=550;
   const normalDamage=999999;
@@ -430,23 +536,27 @@ function shootWeapon(w){
   if(lv<=0)return;
   if(w.type==="magic"){
     const targets=nearestEnemies(1,player.range); if(!targets.length)return;
+    tone(520,.045,"square",.045);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=player.multi+Math.floor((lv-1)/3);
     for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,player.damage+player.damageBonus+lv*7,player.bulletSpeed,5,2.4);
     w.cooldown=Math.max(.18,player.fireRate)/player.attackSpeed;
   }else if(w.type==="shotgun"){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
+    noise(.08,.08,0,700);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=4+lv;
     for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,95+lv*25+player.damageBonus,700,9,1.6,"shotgun");
     w.cooldown=Math.max(.65,1.68-lv*.08)/player.attackSpeed;
   }else if(w.type==="fireball"){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;
+    tone(210,.14,"sawtooth",.06,0,430);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=Math.min(3,1+Math.floor(lv/3));
     for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,85+lv*14+player.damageBonus,430,24,2.8,"fireball",110+lv*10);
     w.cooldown=Math.max(.7,1.8-lv*.1)/player.attackSpeed;
   }else if(w.type==="shockwave"){
+  tone(130,.16,"sine",.06,0,320);
   const radius=180+lv*20+Math.min(Math.max(player.range-520,0),500)*.35;
   const damage=45+lv*18+player.damageBonus*.45;
   const knockback=70+lv*12;
@@ -527,6 +637,7 @@ function shootWeapon(w){
     }
     w.cooldown=Math.max(.7,1.5-lv*.08)/player.attackSpeed;
   }else if(w.type==="blackhole"){
+    playSfx("blackhole");
     const targets=nearestEnemies(1,player.range+220);
     if(!targets.length)return;
 
@@ -583,6 +694,7 @@ function addXp(v){
   xp+=v;
   while(xp>=xpNeed){
     xp-=xpNeed; level++; xpNeed=Math.floor(xpNeed*1.15+3);
+    playSfx("levelup");
     paused=true; showUpgrade();
   }
 }
@@ -612,7 +724,7 @@ function showUpgrade(){
   upgrades.forEach(u=>{
     const c=document.createElement("div");c.className="card";
     c.innerHTML=`<h3>${u.title}</h3><p>${u.desc}</p>`;
-    c.onclick=()=>{u.apply();weaponLevel=weapons.filter(w=>w.level>0).length;document.getElementById("upgrade").style.display="none";paused=false;last=performance.now();showMessage("강화 완료!");};
+    c.onclick=()=>{u.apply();playSfx("upgrade");weaponLevel=weapons.filter(w=>w.level>0).length;document.getElementById("upgrade").style.display="none";paused=false;last=performance.now();showMessage("강화 완료!");};
     box.appendChild(c);
   });
   document.getElementById("upgrade").style.display="flex";
@@ -621,13 +733,17 @@ function showUpgrade(){
 function hurtPlayer(d){
   if(hitCooldown>0)return;
   player.hp-=d;hitCooldown=.55;
+  playSfx("hit");
   for(let i=0;i<7;i++)particles.push({x:player.x,y:player.y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.35});
   if(player.hp<=0)gameOver();
 }
 
 function gameOver(){
   running=false;
+   document.getElementById("audioControls").style.display="block";
   paused=false;
+  stopBgm();
+  playSfx("gameover");
 
   const survivalSeconds=Math.floor(elapsed);
   const finalScore=survivalSeconds*10+kills*20;
@@ -683,6 +799,7 @@ function openTreasure(){
     c.innerHTML=`<h3>${choice.title}</h3><p>${choice.desc}</p>`;
     c.onclick=()=>{
       choice.apply();
+      playSfx("treasure");
       treasureChest=null;
       treasureChoices=[];
       document.getElementById("treasure").style.display="none";
@@ -701,6 +818,10 @@ function defeatEnemy(e){
 
   // 이미 처치 처리된 적은 다시 처리하지 않는다.
   if(e.defeated)return;
+
+  if(e.boss)playSfx("bossKill");
+  else if(e.elite)playSfx("eliteKill");
+  else if(performance.now()-lastEnemySfxTime>75){lastEnemySfxTime=performance.now();playSfx("kill");}
 
   // 보스
   if(e.boss){
@@ -796,6 +917,7 @@ function startRandomEvent(){
   }else if(type==="magnet"){
     showMessage("🧲 자석 폭풍! 15초 동안 모든 젬이 끌려옵니다!");
   }
+  playSfx(type==="berserk"?"berserk":"boss");
 }
 
 function updateRandomEvent(dt){
@@ -807,6 +929,7 @@ function updateRandomEvent(dt){
       randomEventGemMultiplier=1;
       randomEvent.nextTime=elapsed+60+Math.random()*30;
       updateRandomEventHud();
+      playSfx("eventEnd");
       showMessage("✨ 랜덤 이벤트 종료!");
     }
   }else if(elapsed>=randomEvent.nextTime){

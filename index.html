@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nabeen survivor 1.5</title>
+<title>Nabeen survivor 1.4</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b12;font-family:Arial,"Malgun Gothic",sans-serif;color:#fff}
@@ -93,13 +93,12 @@ button:hover{filter:brightness(1.1)}
 </div>
 <div id="audioControls">
   <div class="audio-row"><label>전체</label><input id="masterVolume" type="range" min="0" max="100" value="70"><span id="audioValue">70%</span></div>
-  <div class="audio-row"><label>BGM</label><input id="bgmVolume" type="range" min="0" max="100" value="35"></div>
   <div class="audio-row"><label>효과음</label><input id="sfxVolume" type="range" min="0" max="100" value="80"></div>
   <div class="audio-row"><button id="audioMute" type="button">🔊 음소거</button></div>
 </div>
 <div id="centerMsg">
   <div class="panel">
-    <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v1.5</small></h1>
+    <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v1.4</small></h1>
     <p>WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
     <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 현재 배경음악에 문제가 있으니 bgm은 0으로 해주세요!</p>
     <button id="startBtn">게임 시작</button>
@@ -154,27 +153,26 @@ let randomEventGemMultiplier=1;
 
 // ===== Audio system (추가 기능: 기존 게임 수치/로직은 변경하지 않음) =====
 let audioCtx=null, masterGain=null, bgmGain=null, sfxGain=null;
-let bgmNodes=[], audioMuted=false;
-let masterVolume=.70, bgmVolume=.35, sfxVolume=.80, lastEnemySfxTime=0;
+let audioMuted=false;
+let masterVolume=.70, sfxVolume=.80, lastEnemySfxTime=0;
 
 function initAudio(){
   if(audioCtx){if(audioCtx.state==="suspended")audioCtx.resume();return;}
   const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
   audioCtx=new AC();
   masterGain=audioCtx.createGain();bgmGain=audioCtx.createGain();sfxGain=audioCtx.createGain();
-  bgmGain.connect(masterGain);sfxGain.connect(masterGain);masterGain.connect(audioCtx.destination);
+  sfxGain.connect(masterGain);masterGain.connect(audioCtx.destination);
   updateAudioGains();
 }
 function updateAudioGains(){
   if(!masterGain)return;
   masterGain.gain.value=audioMuted?0:masterVolume;
-  bgmGain.gain.value=bgmVolume;sfxGain.gain.value=sfxVolume;
+  sfxGain.gain.value=sfxVolume;
   const v=document.getElementById("audioValue");if(v)v.textContent=`${Math.round(masterVolume*100)}%`;
 }
 function setAudioParam(param,value){
   value=Math.max(0,Math.min(1,value));
   if(param==="master")masterVolume=value;
-  else if(param==="bgm")bgmVolume=value;
   else if(param==="sfx")sfxVolume=value;
   initAudio();updateAudioGains();
 }
@@ -215,24 +213,10 @@ function playSfx(name){
     case "gameover":tone(440,.16,"sine",.07,0,330);tone(330,.18,"sine",.07,.17,220);tone(220,.28,"sine",.08,.36,110);break;
   }
 }
-function startBgm(){
-  initAudio();if(!audioCtx||bgmNodes.length)return;
-  const master=audioCtx.createGain(),osc1=audioCtx.createOscillator(),osc2=audioCtx.createOscillator(),lfo=audioCtx.createOscillator(),lg=audioCtx.createGain(),now=audioCtx.currentTime;
-  master.gain.value=.20;master.connect(bgmGain);
-  osc1.type="triangle";osc2.type="sine";lfo.type="sine";osc1.frequency.value=110;osc2.frequency.value=164.81;lfo.frequency.value=.08;lg.gain.value=3;
-  lfo.connect(lg);lg.connect(osc2.frequency);osc1.connect(master);osc2.connect(master);
-  osc1.start(now);osc2.start(now);lfo.start(now);bgmNodes=[osc1,osc2,lfo,master];
-}
-function stopBgm(){
-  if(!bgmNodes.length||!audioCtx)return;
-  const nodes=bgmNodes;bgmNodes=[];const t=audioCtx.currentTime,master=nodes[3];
-  master.gain.cancelScheduledValues(t);master.gain.setValueAtTime(master.gain.value,t);master.gain.exponentialRampToValueAtTime(.0001,t+.18);
-  setTimeout(()=>nodes.forEach(n=>{try{n.stop()}catch{}try{n.disconnect()}catch{}}),220);
-}
+
 function initAudioControls(){
-  const m=document.getElementById("masterVolume"),b=document.getElementById("bgmVolume"),s=document.getElementById("sfxVolume"),mute=document.getElementById("audioMute");
+  const m=document.getElementById("masterVolume"),s=document.getElementById("sfxVolume"),mute=document.getElementById("audioMute");
   if(m)m.addEventListener("input",()=>setAudioParam("master",Number(m.value)/100));
-  if(b)b.addEventListener("input",()=>setAudioParam("bgm",Number(b.value)/100));
   if(s)s.addEventListener("input",()=>setAudioParam("sfx",Number(s.value)/100));
   if(mute)mute.addEventListener("click",()=>{audioMuted=!audioMuted;mute.textContent=audioMuted?"🔇 음소거 해제":"🔊 음소거";mute.classList.toggle("muted",audioMuted);initAudio();updateAudioGains();});
 }

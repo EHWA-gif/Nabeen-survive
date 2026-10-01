@@ -523,8 +523,8 @@ function nearestEnemies(count, range){
   return enemies.filter(e=>(e.x-player.x)**2+(e.y-player.y)**2<=range*range)
     .sort((a,b)=>((a.x-player.x)**2+(a.y-player.y)**2)-((b.x-player.x)**2+(b.y-player.y)**2)).slice(0,count);
 }
-function addBullet(angle, damage, speed, r, life, kind="normal", splash=0){
-  bullets.push({x:player.x+Math.cos(angle)*20,y:player.y+Math.sin(angle)*20,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r,damage,life,kind,splash,source:kind==="shotgun"?"shotgun":kind==="fireball"?"fireball":kind==="boomerang"?"boomerang":"magic"});
+function addBullet(angle, damage, speed, r, life, kind="normal", splash=0, evolved=false){
+  bullets.push({x:player.x+Math.cos(angle)*20,y:player.y+Math.sin(angle)*20,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r,damage,life,kind,splash,evolved,source:kind==="shotgun"?"shotgun":kind==="fireball"?"fireball":kind==="boomerang"?"boomerang":"magic"});
 }
 function shootWeapon(w){
   const lv=w.level;
@@ -535,7 +535,7 @@ function shootWeapon(w){
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=player.multi+Math.floor((lv-1)/3)+(w.evolved?1:0);
     const damage=(player.damage+player.damageBonus+lv*7)*(w.evolved?1.35:1);
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,damage,player.bulletSpeed,5,2.4);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,damage,player.bulletSpeed,5,2.4,"magic",0,w.evolved);
     w.cooldown=Math.max(.18,player.fireRate)/player.attackSpeed;
   }else if(w.type==="shotgun"){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
@@ -543,7 +543,7 @@ function shootWeapon(w){
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=4+lv+(w.evolved?2:0);
     const damage=(95+lv*25+player.damageBonus)*(w.evolved?1.25:1);
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,damage,700,9,1.6,"shotgun");
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,damage,700,9,1.6,"shotgun",0,w.evolved);
     w.cooldown=Math.max(.65,1.68-lv*.08)/player.attackSpeed;
   }else if(w.type==="fireball"){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;
@@ -552,7 +552,7 @@ function shootWeapon(w){
     const n=Math.min(3,1+Math.floor(lv/3))+(w.evolved?1:0);
     const damage=(85+lv*14+player.damageBonus)*(w.evolved?1.35:1);
     const splash=110+lv*10+(w.evolved?40:0);
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,damage,430,24,2.8,"fireball",splash);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,damage,430,24,2.8,"fireball",splash,w.evolved);
     w.cooldown=Math.max(.7,1.8-lv*.1)/player.attackSpeed;
   }else if(w.type==="shockwave"){
   tone(130,.16,"sine",.06,0,320);
@@ -626,7 +626,7 @@ function shootWeapon(w){
       const target=targets[i%targets.length];
       const base=Math.atan2(target.y-player.y,target.x-player.x);
       const spread=(i-(count-1)/2)*.13;
-      addBullet(base+spread,(70+lv*20+player.damageBonus)*(w.evolved?1.30:1),560,17,3.3,"boomerang");
+      addBullet(base+spread,(70+lv*20+player.damageBonus)*(w.evolved?1.30:1),560,17,3.3,"boomerang",0,w.evolved);
       const b=bullets[bullets.length-1];
       b.returning=false;
       b.outTime=.9;
@@ -1436,10 +1436,20 @@ function draw(){
   for(const b of bullets){
     const x=sx(b.x),y=sy(b.y);
     if(x<-30||x>W+30||y<-30||y>H+30)continue;
+    const evolvedColor =
+      b.evolved && b.source==="magic" ? "#ff8c00" :
+      b.evolved && b.source==="fireball" ? "#ff3b30" :
+      b.evolved && b.source==="shotgun" ? "#a855f7" :
+      "#ffe66d";
+    const evolvedGlow =
+      b.evolved && b.source==="magic" ? "#ff8c0033" :
+      b.evolved && b.source==="fireball" ? "#ff3b3033" :
+      b.evolved && b.source==="shotgun" ? "#a855f733" :
+      "#ffe66d22";
     ctx.beginPath();ctx.arc(x,y,b.r,0,Math.PI*2);
-    ctx.fillStyle="#ffe66d";ctx.fill();
+    ctx.fillStyle=evolvedColor;ctx.fill();
     ctx.beginPath();ctx.arc(x,y,b.r*2.2,0,Math.PI*2);
-    ctx.fillStyle="#ffe66d22";ctx.fill();
+    ctx.fillStyle=evolvedGlow;ctx.fill();
   }
 
   for(const e of enemies){
@@ -1523,7 +1533,11 @@ function draw(){
     ctx.quadraticCurveTo(16,0,15,-2);
     ctx.closePath();
 
-    ctx.fillStyle="#facc15";
+    const boomerangColor=b.evolved?"#3b82f6":"#facc15";
+    const boomerangHighlight=b.evolved?"#bfdbfe":"#fff2a8";
+    const boomerangCore=b.evolved?"#1d4ed8":"#9f7a05";
+
+    ctx.fillStyle=boomerangColor;
     ctx.fill();
 
     ctx.beginPath();
@@ -1538,7 +1552,7 @@ function draw(){
     ctx.quadraticCurveTo(13,0,12,-2);
     ctx.closePath();
 
-    ctx.fillStyle="#fff2a8";
+    ctx.fillStyle=boomerangHighlight;
     ctx.fill();
 
     // 중앙은 어둡게 비워 실제 부메랑의 꺾인 형태를 강조
@@ -1551,7 +1565,7 @@ function draw(){
     ctx.quadraticCurveTo(7,0,6,-1.5);
     ctx.closePath();
 
-    ctx.fillStyle="#9f7a05";
+    ctx.fillStyle=boomerangCore;
     ctx.fill();
 
     ctx.restore();

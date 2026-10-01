@@ -41,6 +41,10 @@ button:hover{filter:brightness(1.1)}
 @media(max-width:700px){#ultimateHud{left:10px;bottom:10px;padding:8px 11px;min-width:135px}#ultimateHud .ultimate-title{font-size:14px}}
 #damageMeter h3{margin:0 0 7px;font-size:15px}
 #blackholeHint{color:#b88cff}
+#evolutionNotice{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000b;z-index:50}
+.evolution-panel{width:min(560px,90%);background:linear-gradient(180deg,#1d2740,#111827);border:2px solid #ffd54a;border-radius:18px;padding:30px;text-align:center;box-shadow:0 18px 60px #000b}
+.evolution-panel h1{margin:0 0 12px;font-size:36px}.evo-name{font-size:27px;font-weight:900;color:#ffe082;margin:12px 0}.evolution-panel p{color:#cbd6ea;line-height:1.6}.evolution-panel button{margin-top:18px}
+
 #bossHud{position:absolute;left:50%;top:72px;transform:translateX(-50%);width:min(560px,55vw);display:none;z-index:5;pointer-events:none;text-align:center;text-shadow:0 2px 3px #000}
 #bossName{font-weight:900;font-size:18px;margin-bottom:5px;color:#ffb4c4}
 #bossBar{height:18px;background:#25121a;border:2px solid #7f3046;border-radius:12px;overflow:hidden;box-shadow:0 5px 20px #0008}
@@ -116,6 +120,14 @@ button:hover{filter:brightness(1.1)}
     <h1>🏆 보물상자</h1>
     <p>보물 하나를 선택하세요.</p>
     <div id="treasureCards"></div>
+  </div>
+</div>
+<div id="evolutionNotice">
+  <div class="evolution-panel">
+    <h1>✨ 무기 진화!</h1>
+    <div class="evo-name" id="evolutionName"></div>
+    <p id="evolutionDesc"></p>
+    <button id="evolutionClose" type="button">진화 확인</button>
   </div>
 </div>
 <div id="message"></div>
@@ -251,7 +263,7 @@ function startGame(){
   randomEventGemMultiplier=1;
   updateRandomEventHud();
   document.getElementById("bossHud").style.display="none";
-  weapons=[{type:"magic",level:1,cooldown:0},{type:"shotgun",level:0,cooldown:0},{type:"fireball",level:0,cooldown:0},{type:"shockwave",level:0,cooldown:0},{type:"boomerang",level:0,cooldown:0},{type:"blackhole",level:0,cooldown:0}];
+  weapons=[{type:"magic",level:1,cooldown:0,evolved:false},{type:"shotgun",level:0,cooldown:0,evolved:false},{type:"fireball",level:0,cooldown:0,evolved:false},{type:"shockwave",level:0,cooldown:0,evolved:false},{type:"boomerang",level:0,cooldown:0,evolved:false},{type:"blackhole",level:0,cooldown:0,evolved:false}];
   shockwaveEffects=[];
   blackholes=[];
   ultimateUsed=false;
@@ -270,7 +282,6 @@ function startGame(){
   document.getElementById("upgrade").style.display="none";
   last=performance.now(); requestAnimationFrame(loop);
   initAudio();
-  startBgm();
   playSfx("start");
   showMessage("생존을 시작하세요!");
 }
@@ -522,27 +533,31 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range); if(!targets.length)return;
     tone(520,.045,"square",.045);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
-    const n=player.multi+Math.floor((lv-1)/3);
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,player.damage+player.damageBonus+lv*7,player.bulletSpeed,5,2.4);
+    const n=player.multi+Math.floor((lv-1)/3)+(w.evolved?1:0);
+    const damage=(player.damage+player.damageBonus+lv*7)*(w.evolved?1.35:1);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.16,damage,player.bulletSpeed,5,2.4);
     w.cooldown=Math.max(.18,player.fireRate)/player.attackSpeed;
   }else if(w.type==="shotgun"){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
     noise(.08,.08,0,700);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
-    const n=4+lv;
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,95+lv*25+player.damageBonus,700,9,1.6,"shotgun");
+    const n=4+lv+(w.evolved?2:0);
+    const damage=(95+lv*25+player.damageBonus)*(w.evolved?1.25:1);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,damage,700,9,1.6,"shotgun");
     w.cooldown=Math.max(.65,1.68-lv*.08)/player.attackSpeed;
   }else if(w.type==="fireball"){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;
     tone(210,.14,"sawtooth",.06,0,430);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
-    const n=Math.min(3,1+Math.floor(lv/3));
-    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,85+lv*14+player.damageBonus,430,24,2.8,"fireball",110+lv*10);
+    const n=Math.min(3,1+Math.floor(lv/3))+(w.evolved?1:0);
+    const damage=(85+lv*14+player.damageBonus)*(w.evolved?1.35:1);
+    const splash=110+lv*10+(w.evolved?40:0);
+    for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,damage,430,24,2.8,"fireball",splash);
     w.cooldown=Math.max(.7,1.8-lv*.1)/player.attackSpeed;
   }else if(w.type==="shockwave"){
   tone(130,.16,"sine",.06,0,320);
-  const radius=180+lv*20+Math.min(Math.max(player.range-520,0),500)*.35;
-  const damage=45+lv*18+player.damageBonus*.45;
+  const radius=180+lv*20+(w.evolved?30:0)+Math.min(Math.max(player.range-520,0),500)*.35;
+  const damage=(45+lv*18+player.damageBonus*.45)*(w.evolved?1.30:1);
   const knockback=70+lv*12;
   let hit=false;
 
@@ -601,9 +616,9 @@ function shootWeapon(w){
 
   if(hit)showMessage("🌀 충격파!");
 
-  w.cooldown=3/player.attackSpeed;
+  w.cooldown=(w.evolved?2.5:3)/player.attackSpeed;
 }else if(w.type==="boomerang"){
-    const count=1+Math.floor((lv-1)/2);
+    const count=1+Math.floor((lv-1)/2)+(w.evolved?1:0);
     const targets=nearestEnemies(count,player.range+210);
     if(!targets.length)return;
 
@@ -611,7 +626,7 @@ function shootWeapon(w){
       const target=targets[i%targets.length];
       const base=Math.atan2(target.y-player.y,target.x-player.x);
       const spread=(i-(count-1)/2)*.13;
-      addBullet(base+spread,70+lv*20+player.damageBonus,560,17,3.3,"boomerang");
+      addBullet(base+spread,(70+lv*20+player.damageBonus)*(w.evolved?1.30:1),560,17,3.3,"boomerang");
       const b=bullets[bullets.length-1];
       b.returning=false;
       b.outTime=.9;
@@ -627,9 +642,9 @@ function shootWeapon(w){
 
     const target=targets[0];
     const count=1+Math.floor((lv-1)/5);
-    const radius=115+lv*15;
-    const duration=3.2+lv*.35;
-    const damage=24+lv*14+player.damageBonus*.35;
+    const radius=115+lv*15+(w.evolved?30:0);
+    const duration=3.2+lv*.35+(w.evolved?.3:0);
+    const damage=(24+lv*14+player.damageBonus*.35)*(w.evolved?1.30:1);
     const pull=70+lv*12;
 
     const minCenterDist=player.r+radius*.62+100;
@@ -683,6 +698,39 @@ function addXp(v){
   }
 }
 
+let evolutionPending=false;
+const EVOLUTION_LEVEL=8;
+const EVOLUTION_INFO={
+  magic:{name:"🌌 슈퍼 나쫀쿠 ",desc:"투사체 수가 늘고 피해량이 크게 증가합니다."},
+  shotgun:{name:"💥 폭풍 산탄",desc:"한 번에 더 많은 탄환을 넓게 발사합니다."},
+  fireball:{name:"☄️ 메테오",desc:"화염구의 피해와 폭발 범위가 증가합니다."},
+  shockwave:{name:"🌀 대충격파",desc:"충격파 범위와 피해가 증가하고 재사용 대기시간이 감소합니다."},
+  boomerang:{name:"🪃 차원 마법구",desc:"마법구가 추가로 생성되고 피해량이 증가합니다."},
+  blackhole:{name:"🕳️ 초대형 블랙홀",desc:"블랙홀의 범위·피해·지속시간이 증가합니다."}
+};
+function evolveWeapon(w){
+  if(!w || w.evolved || w.level<EVOLUTION_LEVEL)return false;
+  w.evolved=true; evolutionPending=true;
+  const info=EVOLUTION_INFO[w.type];
+  document.getElementById("evolutionName").textContent=info.name;
+  document.getElementById("evolutionDesc").textContent=info.desc;
+  document.getElementById("evolutionNotice").style.display="flex";
+  paused=true;
+  showMessage(`✨ ${info.name} 진화!`);
+  return true;
+}
+function checkWeaponEvolution(){
+  for(const w of weapons){
+    if(w.level>=EVOLUTION_LEVEL && !w.evolved)return evolveWeapon(w);
+  }
+  return false;
+}
+document.getElementById("evolutionClose").onclick=()=>{
+  document.getElementById("evolutionNotice").style.display="none";
+  evolutionPending=false; paused=false; last=performance.now();
+  showMessage("🔥 진화한 무기의 힘이 해방되었습니다!");
+};
+
 function showUpgrade(){
   const magic=weapons.find(w=>w.type==="magic");
   const shotgun=weapons.find(w=>w.type==="shotgun");
@@ -692,23 +740,23 @@ function showUpgrade(){
   const blackhole=weapons.find(w=>w.type==="blackhole");
   const pool=[
     {title:"🔥 공격력 강화",desc:"기본 공격력 +9",apply:()=>player.damageBonus+=9},
-    {title:"⚡ 나쫀쿠 강화",desc:`나쫀쿠 Lv.${magic.level+1} (공격력 증가)`,apply:()=>magic.level++},
+    {title:"⚡ 나쫀쿠 강화",desc:`나쫀쿠 Lv.${magic.level+1}${magic.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} (공격력 증가)`,apply:()=>magic.level++},
     {title:"💨 이동속도",desc:"이동속도 +30",apply:()=>player.speed+=30},
     {title:"❤️ 최대 체력",desc:"최대 HP +25 및 회복",apply:()=>{player.maxHp+=25;player.hp=Math.min(player.maxHp,player.hp+25)}},
     {title:"🌀 투사체 증가",desc:"나쫀쿠 투사체 +1",apply:()=>player.multi+=1},
     {title:"🎯 사거리 증가",desc:"공격 사거리 +50",apply:()=>player.range+=50},
-    ...(shotgun.level===0?[{title:"🔫 산탄총 획득",desc:"전방에 여러 발을 부채꼴로 발사",apply:()=>shotgun.level=1}]:[{title:"🔫 산탄총 강화",desc:`산탄총 Lv.${shotgun.level+1} · 탄환 증가`,apply:()=>shotgun.level++}]),
-    ...(fireball.level===0?[{title:"☄️ 화염구 획득",desc:"강력한 화염구가 적중 시 주변도 공격",apply:()=>fireball.level=1}]:[{title:"☄️ 화염구 강화",desc:`화염구 Lv.${fireball.level+1} · 데미지 및 화염구 증가`,apply:()=>fireball.level++}]),
-    ...(shockwave.level===0?[{title:"🌀 충격파 획득",desc:"플레이어 주변의 적에게 피해를 주고 뒤로 밀어냄",apply:()=>shockwave.level=1}]:[{title:"🌀 충격파 강화",desc:`충격파 Lv.${shockwave.level+1} · 범위, 피해, 넉백 증가`,apply:()=>shockwave.level++}]),
-    ...(boomerang.level===0?[{title:"🪃 마법구 획득",desc:"전방으로 날아갔다가 플레이어에게 돌아오며 적에게 피해",apply:()=>boomerang.level=1}]:[{title:"🪃 마법구 강화",desc:`마법구 Lv.${boomerang.level+1} · 마법구 증가`,apply:()=>boomerang.level++}]),
-    ...(blackhole.level===0?[{title:"🕳️ 블랙홀 획득",desc:"적을 끌어당기며 주변에 지속 피해를 주는 블랙홀 생성",apply:()=>blackhole.level=1}]:[{title:"🕳️ 블랙홀 강화",desc:`블랙홀 Lv.${blackhole.level+1} · 범위, 피해, 지속시간 증가`,apply:()=>blackhole.level++}])
+    ...(shotgun.level===0?[{title:"🔫 산탄총 획득",desc:"전방에 여러 발을 부채꼴로 발사",apply:()=>shotgun.level=1}]:[{title:"🔫 산탄총 강화",desc:`산탄총 Lv.${shotgun.level+1}${shotgun.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 탄환 증가`,apply:()=>shotgun.level++}]),
+    ...(fireball.level===0?[{title:"☄️ 화염구 획득",desc:"강력한 화염구가 적중 시 주변도 공격",apply:()=>fireball.level=1}]:[{title:"☄️ 화염구 강화",desc:`화염구 Lv.${fireball.level+1}${fireball.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 데미지 및 화염구 증가`,apply:()=>fireball.level++}]),
+    ...(shockwave.level===0?[{title:"🌀 충격파 획득",desc:"플레이어 주변의 적에게 피해를 주고 뒤로 밀어냄",apply:()=>shockwave.level=1}]:[{title:"🌀 충격파 강화",desc:`충격파 Lv.${shockwave.level+1}${shockwave.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 범위, 피해, 넉백 증가`,apply:()=>shockwave.level++}]),
+    ...(boomerang.level===0?[{title:"🪃 마법구 획득",desc:"전방으로 날아갔다가 플레이어에게 돌아오며 적에게 피해",apply:()=>boomerang.level=1}]:[{title:"🪃 마법구 강화",desc:`마법구 Lv.${boomerang.level+1}${boomerang.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 마법구 증가`,apply:()=>boomerang.level++}]),
+    ...(blackhole.level===0?[{title:"🕳️ 블랙홀 획득",desc:"적을 끌어당기며 주변에 지속 피해를 주는 블랙홀 생성",apply:()=>blackhole.level=1}]:[{title:"🕳️ 블랙홀 강화",desc:`블랙홀 Lv.${blackhole.level+1}${blackhole.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 범위, 피해, 지속시간 증가`,apply:()=>blackhole.level++}])
   ];
   upgrades=[...pool].sort(()=>Math.random()-.5).slice(0,3);
   const box=document.getElementById("cards"); box.innerHTML="";
   upgrades.forEach(u=>{
     const c=document.createElement("div");c.className="card";
     c.innerHTML=`<h3>${u.title}</h3><p>${u.desc}</p>`;
-    c.onclick=()=>{u.apply();playSfx("upgrade");weaponLevel=weapons.filter(w=>w.level>0).length;document.getElementById("upgrade").style.display="none";paused=false;last=performance.now();showMessage("강화 완료!");};
+    c.onclick=()=>{u.apply();playSfx("upgrade");weaponLevel=weapons.filter(w=>w.level>0).length;document.getElementById("upgrade").style.display="none";if(!checkWeaponEvolution()){paused=false;last=performance.now();showMessage("강화 완료!");}};
     box.appendChild(c);
   });
   document.getElementById("upgrade").style.display="flex";
@@ -726,7 +774,6 @@ function gameOver(){
   running=false;
    document.getElementById("audioControls").style.display="block";
   paused=false;
-  stopBgm();
   playSfx("gameover");
 
   const survivalSeconds=Math.floor(elapsed);
@@ -766,6 +813,7 @@ function openTreasure(){
       if(owned.length){
         const target=owned[Math.floor(Math.random()*owned.length)];
         target.level+=2;
+        checkWeaponEvolution();
       }
     }},
     {title:"🔥 파괴의 보물",desc:"공격력 +35",apply:()=>player.damageBonus+=35},

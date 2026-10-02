@@ -638,7 +638,7 @@ function shootWeapon(w){
     for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,damage,430,24,2.8,"fireball",splash,w.evolved);
     w.cooldown=Math.max(.7,1.8-lv*.1)/player.attackSpeed;
   }else if(w.type==="laser"){
-    const targets=nearestEnemies(1,player.range+180); if(!targets.length)return;
+    const targets=nearestEnemies(1,player.range+210); if(!targets.length)return;
     const target=targets[0];
     const angle=Math.atan2(target.y-player.y,target.x-player.x);
     const dirX=Math.cos(angle),dirY=Math.sin(angle);

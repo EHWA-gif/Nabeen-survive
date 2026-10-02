@@ -644,7 +644,7 @@ function shootWeapon(w){
     const dirX=Math.cos(angle),dirY=Math.sin(angle);
     const length=player.range+(w.evolved?400:200);
     const width=(40+Math.min(lv,8)*1.5)*(w.evolved?1.55:1);
-    const damage=(115+lv*25+player.damageBonus*.45)*(w.evolved?1.45:1);
+    const damage=(115+lv*40+player.damageBonus*.45)*(w.evolved?1.45:1);
     tone(240,.12,"sawtooth",.055,0,480);
     tone(520,.16,"triangle",.045,.035,w.evolved?1180:900);
     // 탈모빔가 향하는 직선 위의 적을 모두 관통해 타격한다.

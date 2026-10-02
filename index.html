@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nabeen survivor 1.4</title>
+<title>Nabeen survivor 1.5</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b12;font-family:Arial,"Malgun Gothic",sans-serif;color:#fff}
 body{display:flex;align-items:center;justify-content:center}
-#game{position:relative;width:min(100vw,1920px);height:min(100vh,1080px);overflow:hidden;background:#111827}
+#game{position:fixed;inset:0;width:100vw;height:100vh;overflow:hidden;background:#111827}
 canvas{display:block;width:100%;height:100%;background:#101827}
 #hud{position:absolute;left:0;top:0;width:100%;padding:14px 18px;pointer-events:none;text-shadow:0 2px 3px #000}
 .row{display:flex;align-items:center;gap:14px}
@@ -18,6 +18,10 @@ canvas{display:block;width:100%;height:100%;background:#101827}
 #xpFill{background:#49d7ff}
 #hpBar{width:180px}#hpFill{background:#ef476f}
 #stats{margin-top:7px;font-size:14px;opacity:.95}
+#scoreHud{position:absolute;left:18px;top:82px;width:400px;padding:3px 9px 4px;background:rgba(9,12,20,.76);border:1px solid rgba(214,179,57,.45);border-radius:4px;color:#e8c94f;text-shadow:0 1px 3px #000;pointer-events:none;box-shadow:0 3px 12px #0006}
+#scoreHud .score-title{font-size:20px;line-height:26px;font-weight:800;letter-spacing:.45;text-align:center;}
+#scoreValue{display:block;text-align:center;font-size:30px;line-height:48px;font-weight:900;color:#f4d65e;font-variant-numeric:tabular-nums}
+@media(max-width:700px){#scoreHud{left:10px;top:76px;width:160px}#scoreValue{font-size:40px}}
 #randomEventHud{position:absolute;left:50%;top:18px;transform:translateX(-50%);display:none;z-index:6;pointer-events:none;background:rgba(8,12,22,.88);border:2px solid #58d5ff;border-radius:14px;padding:9px 18px;text-align:center;min-width:230px;box-shadow:0 6px 22px #0008;text-shadow:0 2px 3px #000}
 #randomEventHud .event-title{font-size:17px;font-weight:bold;white-space:nowrap}
 #randomEventHud .event-time{margin-top:3px;font-size:13px;color:#c7d0df}
@@ -68,6 +72,15 @@ button:hover{filter:brightness(1.1)}
 #audioMute.muted{background:#3a2028;border-color:#8b4b59;color:#ffb4c4}
 #audioValue{width:34px;text-align:right;color:#8fa3c7;font-size:11px}
 @media(max-width:700px){#audioControls{right:10px;top:185px;width:190px;padding:8px 10px}}
+#pauseButton{position:absolute;right:252px;top:12px;z-index:20;margin:0;padding:8px 12px;font-size:14px}
+#pauseMenu{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000b;z-index:30}
+#pauseMenu .panel{width:min(440px,92vw)}
+#pauseMenu .audio-row{display:flex;align-items:center;gap:10px;margin:12px 0;text-align:left}
+#pauseMenu label{width:52px;color:#c7d0df;font-size:14px}
+#pauseMenu input[type="range"]{flex:1;accent-color:#58d5ff}
+#pauseMenu .audio-value{width:40px;text-align:right;color:#8fa3c7;font-size:12px}
+#pauseMenu #pauseMute{margin:8px 0 0;padding:8px 12px;font-size:13px}
+@media(max-width:700px){#pauseButton{right:10px;top:245px}}
 </style>
 </head>
 <body>
@@ -81,6 +94,7 @@ button:hover{filter:brightness(1.1)}
   </div>
   <div id="stats">처치 0 · 생존 0:00 · 무기 1</div>
 </div>
+<div id="scoreHud"><div class="score-title">TOTAL POINT</div><b id="scoreValue">0</b></div>
 <div id="bossHud"><div id="bossName">👹 대왕 나룡이</div><div id="bossBar"><div id="bossFill"></div></div></div>
 <div id="randomEventHud"><div class="event-title" id="randomEventTitle"></div><div class="event-time" id="randomEventTime"></div></div>
 <div id="ultimateHud"><div class="ultimate-title" id="ultimateTitle">💥 아아앜 READY</div><div class="ultimate-key">SPACE</div></div>
@@ -92,6 +106,7 @@ button:hover{filter:brightness(1.1)}
   <div class="dm-row"><span>🌀 충격파</span><b id="dmgShockwave">0</b></div>
   <div class="dm-row"><span>🪃 마법구</span><b id="dmgBoomerang">0</b></div>
   <div class="dm-row"><span>🕳️ 블랙홀</span><b id="dmgBlackhole">0</b></div>
+  <div class="dm-row"><span>🔆 탈모빔</span><b id="dmgLaser">0</b></div>
   <div class="dm-row dm-total"><span>TOTAL</span><b id="dmgTotal">0</b></div>
   <div class="dm-row dm-dps"><span>DPS</span><b id="dmgDps">0</b></div>
 </div>
@@ -100,9 +115,20 @@ button:hover{filter:brightness(1.1)}
   <div class="audio-row"><label>효과음</label><input id="sfxVolume" type="range" min="0" max="100" value="80"></div>
   <div class="audio-row"><button id="audioMute" type="button">🔊 음소거</button></div>
 </div>
+<button id="pauseButton" type="button" style="display:none" aria-label="일시정지">Ⅱ 일시정지</button>
+<div id="pauseMenu">
+  <div class="panel">
+    <h1>⏸️ 일시정지</h1>
+    <p>음량을 조절할 수 있습니다.</p>
+    <div class="audio-row"><label for="pauseMasterVolume">전체</label><input id="pauseMasterVolume" type="range" min="0" max="100" value="70"><span id="pauseAudioValue" class="audio-value">70%</span></div>
+    <div class="audio-row"><label for="pauseSfxVolume">효과음</label><input id="pauseSfxVolume" type="range" min="0" max="100" value="80"></div>
+    <button id="pauseMute" type="button">🔊 음소거</button><br>
+    <button id="resumeButton" type="button">계속하기</button>
+  </div>
+</div>
 <div id="centerMsg">
   <div class="panel">
-    <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v1.4</small></h1>
+    <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v1.5</small></h1>
     <p>WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
     <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 듀아악!</p>
     <button id="startBtn">게임 시작</button>
@@ -110,8 +136,8 @@ button:hover{filter:brightness(1.1)}
 </div>
 <div id="upgrade">
   <div class="panel">
-    <h1>✨ 레벨 업!</h1>
-    <p>하나를 선택하세요.</p>
+    <h1 id="upgradeTitle">✨ 레벨 업!</h1>
+    <p id="upgradeDesc">하나를 선택하세요.</p>
     <div class="cards" id="cards"></div>
   </div>
 </div>
@@ -153,13 +179,16 @@ let kills=0, level=1, xp=0, xpNeed=8, weaponLevel=1, spawnTimer=0, shootTimer=0,
 let upgrades=[];
 let weapons=[];
 let shockwaveEffects=[];
+let laserBeams=[];
 let blackholes=[];
 let ultimateUsed=false;
 let ultimateEffects=[];
 let ultimateFlash=0;
-let damageMeter={magic:0,shotgun:0,fireball:0,shockwave:0,boomerang:0,blackhole:0};
+let damageMeter={magic:0,shotgun:0,fireball:0,shockwave:0,boomerang:0,blackhole:0,laser:0};
 let boss=null, nextBossTime=300, bossAttackTimer=0, bossWaveTimer=0;
 let treasureChest=null, treasureChoices=[];
+let silverChests=[];
+const SILVER_CHEST_DROP_CHANCE=0.001; // 적 처치당 0.1%, 보스도 한 번만 판정
 let randomEvent={active:false,type:null,time:0,duration:0,nextTime:60};
 let randomEventGemMultiplier=1;
 
@@ -180,7 +209,17 @@ function updateAudioGains(){
   if(!masterGain)return;
   masterGain.gain.value=audioMuted?0:masterVolume;
   sfxGain.gain.value=sfxVolume;
-  const v=document.getElementById("audioValue");if(v)v.textContent=`${Math.round(masterVolume*100)}%`;
+  const pct=`${Math.round(masterVolume*100)}%`;
+  const v=document.getElementById("audioValue");if(v)v.textContent=pct;
+  const pauseValue=document.getElementById("pauseAudioValue");if(pauseValue)pauseValue.textContent=pct;
+  const masterInput=document.getElementById("masterVolume"), pauseMasterInput=document.getElementById("pauseMasterVolume");
+  if(masterInput)masterInput.value=String(Math.round(masterVolume*100));
+  if(pauseMasterInput)pauseMasterInput.value=String(Math.round(masterVolume*100));
+  const sfxInput=document.getElementById("sfxVolume"), pauseSfxInput=document.getElementById("pauseSfxVolume");
+  if(sfxInput)sfxInput.value=String(Math.round(sfxVolume*100));
+  if(pauseSfxInput)pauseSfxInput.value=String(Math.round(sfxVolume*100));
+  const muteText=audioMuted?"🔇 음소거 해제":"🔊 음소거";
+  for(const id of ["audioMute","pauseMute"]){const b=document.getElementById(id);if(b){b.textContent=muteText;b.classList.toggle("muted",audioMuted);}}
 }
 function setAudioParam(param,value){
   value=Math.max(0,Math.min(1,value));
@@ -227,10 +266,20 @@ function playSfx(name){
 }
 
 function initAudioControls(){
-  const m=document.getElementById("masterVolume"),s=document.getElementById("sfxVolume"),mute=document.getElementById("audioMute");
-  if(m)m.addEventListener("input",()=>setAudioParam("master",Number(m.value)/100));
-  if(s)s.addEventListener("input",()=>setAudioParam("sfx",Number(s.value)/100));
-  if(mute)mute.addEventListener("click",()=>{audioMuted=!audioMuted;mute.textContent=audioMuted?"🔇 음소거 해제":"🔊 음소거";mute.classList.toggle("muted",audioMuted);initAudio();updateAudioGains();});
+  const controls=[
+    ["masterVolume","master"],["pauseMasterVolume","master"],
+    ["sfxVolume","sfx"],["pauseSfxVolume","sfx"]
+  ];
+  for(const [id,param] of controls){
+    const input=document.getElementById(id);
+    if(input)input.addEventListener("input",()=>setAudioParam(param,Number(input.value)/100));
+  }
+  for(const id of ["audioMute","pauseMute"]){
+    const button=document.getElementById(id);
+    if(button)button.addEventListener("click",()=>{audioMuted=!audioMuted;initAudio();updateAudioGains();});
+  }
+  document.getElementById("pauseButton").addEventListener("click",togglePause);
+  document.getElementById("resumeButton").addEventListener("click",resumeGame);
 }
 initAudioControls();
 
@@ -238,13 +287,21 @@ function resize(){
   const r=gameEl.getBoundingClientRect();
   const d=Math.min(devicePixelRatio||1,2);
   canvas.width=Math.floor(r.width*d); canvas.height=Math.floor(r.height*d);
-  W=r.width; H=r.height; ctx.setTransform(d,0,0,d,0,0);
+  // 게임 좌표(1920×1080)는 고정하고 화면 크기에 맞춰 캔버스 표시만 조정합니다.
+  ctx.setTransform(canvas.width/1920,0,0,canvas.height/1080,0,0);
 }
 addEventListener("resize",resize); resize();
 
 addEventListener("keydown",e=>{
-  keys[e.key.toLowerCase()]=true;
-  if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) e.preventDefault();
+  const key=e.key.toLowerCase();
+  if(key==="escape" || key==="p"){
+    e.preventDefault();
+    if(document.getElementById("pauseMenu").style.display==="flex")resumeGame();
+    else togglePause();
+    return;
+  }
+  keys[key]=true;
+  if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key)) e.preventDefault();
   if((e.key.toLowerCase()==="r")&&!running) startGame();
   if(e.code==="Space" && running && !paused){
     e.preventDefault();
@@ -253,28 +310,52 @@ addEventListener("keydown",e=>{
 });
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
+function togglePause(){
+  if(!running)return;
+  const menu=document.getElementById("pauseMenu");
+  if(menu.style.display==="flex")return resumeGame();
+  if(paused)return; // 레벨업·보물·진화 선택 중에는 별도 창을 유지한다.
+  paused=true;
+  for(const key of Object.keys(keys))keys[key]=false;
+  updateAudioGains();
+  menu.style.display="flex";
+  last=performance.now();
+}
+function resumeGame(){
+  if(!running)return;
+  document.getElementById("pauseMenu").style.display="none";
+  paused=false;
+  for(const key of Object.keys(keys))keys[key]=false;
+  last=performance.now();
+}
+
 function startGame(){
   running=true; paused=false; elapsed=0;kills=0;level=1;xp=0;xpNeed=8;weaponLevel=1;
-    document.getElementById("audioControls").style.display="none";
+  document.getElementById("audioControls").style.display="none";
+  document.getElementById("pauseButton").style.display="block";
+  document.getElementById("pauseMenu").style.display="none";
+  document.getElementById("scoreValue").textContent="0";
   enemies=[];bullets=[];gems=[];magnetItems=[];particles=[];
   boss=null; nextBossTime=300; bossAttackTimer=3; bossWaveTimer=5;
   treasureChest=null; treasureChoices=[];
+  silverChests=[];
   randomEvent={active:false,type:null,time:0,duration:0,nextTime:60+Math.random()*30};
   randomEventGemMultiplier=1;
   updateRandomEventHud();
   document.getElementById("bossHud").style.display="none";
-  weapons=[{type:"magic",level:1,cooldown:0,evolved:false},{type:"shotgun",level:0,cooldown:0,evolved:false},{type:"fireball",level:0,cooldown:0,evolved:false},{type:"shockwave",level:0,cooldown:0,evolved:false},{type:"boomerang",level:0,cooldown:0,evolved:false},{type:"blackhole",level:0,cooldown:0,evolved:false}];
+  weapons=[{type:"magic",level:1,cooldown:0,evolved:false},{type:"shotgun",level:0,cooldown:0,evolved:false},{type:"fireball",level:0,cooldown:0,evolved:false},{type:"shockwave",level:0,cooldown:0,evolved:false},{type:"boomerang",level:0,cooldown:0,evolved:false},{type:"blackhole",level:0,cooldown:0,evolved:false},{type:"laser",level:0,cooldown:0,evolved:false}];
   shockwaveEffects=[];
+  laserBeams=[];
   blackholes=[];
   ultimateUsed=false;
   ultimateEffects=[];
   ultimateFlash=0;
   updateUltimateHud();
-  damageMeter={magic:0,shotgun:0,fireball:0,shockwave:0,boomerang:0,blackhole:0};
+  damageMeter={magic:0,shotgun:0,fireball:0,shockwave:0,boomerang:0,blackhole:0,laser:0};
   updateDamageMeter();
   player={
     x:0,y:0,r:18,speed:205,maxHp:40,hp:40,
-    damage:14,damageBonus:0,fireRate:.12,bulletSpeed:500,range:520,multi:1,attackSpeed:1
+    damage:14,damageBonus:0,fireRate:.12,bulletSpeed:500,range:520,multi:1,treasureMulti:0,attackSpeed:1
   };
   cameraX=player.x-W/2;
   cameraY=player.y-H/2;
@@ -351,8 +432,8 @@ function recordDamage(type, amount){
   damageMeter[type]+=amount;
 }
 function updateDamageMeter(){
-  const names=["magic","shotgun","fireball","shockwave","boomerang","blackhole"];
-  const ids=["dmgMagic","dmgShotgun","dmgFireball","dmgShockwave","dmgBoomerang","dmgBlackhole"];
+  const names=["magic","shotgun","fireball","shockwave","boomerang","blackhole","laser"];
+  const ids=["dmgMagic","dmgShotgun","dmgFireball","dmgShockwave","dmgBoomerang","dmgBlackhole","dmgLaser"];
   let total=0;
 
   for(let i=0;i<names.length;i++){
@@ -515,6 +596,8 @@ function spawnEnemy(){
   }else{
     const hp=140*hpScale;
     e={x,y,r:11+Math.random()*4,hp,maxHp:hp,speed:40*speedScale,damage:500*damageScale,elite:false};
+    // 5분 생존 후부터 기존 일반 적 일부가 분열형 적으로 등장한다.
+    if(elapsed>=300 && Math.random()<.10)e.splitter=true;
   }
   enemies.push(e);
 }
@@ -541,7 +624,7 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range+100); if(!targets.length)return;
     noise(.08,.08,0,700);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
-    const n=4+lv+(w.evolved?2:0);
+    const n=4+lv+(w.evolved?2:0)+player.treasureMulti;
     const damage=(95+lv*25+player.damageBonus)*(w.evolved?1.25:1);
     for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,damage,700,9,1.6,"shotgun",0,w.evolved);
     w.cooldown=Math.max(.65,1.68-lv*.08)/player.attackSpeed;
@@ -549,11 +632,37 @@ function shootWeapon(w){
     const targets=nearestEnemies(1,player.range+160); if(!targets.length)return;
     tone(210,.14,"sawtooth",.06,0,430);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
-    const n=Math.min(3,1+Math.floor(lv/3))+(w.evolved?1:0);
+    const n=Math.min(3,1+Math.floor(lv/3))+(w.evolved?1:0)+player.treasureMulti;
     const damage=(85+lv*14+player.damageBonus)*(w.evolved?1.35:1);
     const splash=110+lv*10+(w.evolved?40:0);
     for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.12,damage,430,24,2.8,"fireball",splash,w.evolved);
     w.cooldown=Math.max(.7,1.8-lv*.1)/player.attackSpeed;
+  }else if(w.type==="laser"){
+    const targets=nearestEnemies(1,player.range+180); if(!targets.length)return;
+    const target=targets[0];
+    const angle=Math.atan2(target.y-player.y,target.x-player.x);
+    const dirX=Math.cos(angle),dirY=Math.sin(angle);
+    const length=player.range+(w.evolved?260:140);
+    const width=(34+Math.min(lv,8)*1.5)*(w.evolved?1.55:1);
+    const damage=(115+lv*25+player.damageBonus*.45)*(w.evolved?1.45:1);
+    tone(240,.12,"sawtooth",.055,0,480);
+    tone(520,.16,"triangle",.045,.035,w.evolved?1180:900);
+    // 탈모빔가 향하는 직선 위의 적을 모두 관통해 타격한다.
+    for(const e of [...enemies]){
+      if(!enemies.includes(e) || e.hp<=0)continue;
+      const dx=e.x-player.x,dy=e.y-player.y;
+      const along=dx*dirX+dy*dirY;
+      const across=Math.abs(dx*dirY-dy*dirX);
+      if(along>=0 && along<=length && across<=width/2+e.r){
+        const dealt=Math.min(e.hp,damage);
+        e.hp-=dealt;
+        recordDamage("laser",dealt);
+        if(e.boss)e.hitFlash=.18;
+        if(e.hp<=0)defeatEnemy(e);
+      }
+    }
+    laserBeams.push({x:player.x,y:player.y,angle,length,width,life:w.evolved?.30:.23,maxLife:w.evolved?.30:.23,evolved:w.evolved});
+    w.cooldown=Math.max(.65,1.45-lv*.055)/player.attackSpeed;
   }else if(w.type==="shockwave"){
   tone(130,.16,"sine",.06,0,320);
   const radius=180+lv*20+(w.evolved?30:0)+Math.min(Math.max(player.range-520,0),500)*.35;
@@ -618,7 +727,7 @@ function shootWeapon(w){
 
   w.cooldown=(w.evolved?2.5:3)/player.attackSpeed;
 }else if(w.type==="boomerang"){
-    const count=1+Math.floor((lv-1)/2)+(w.evolved?1:0);
+    const count=1+Math.floor((lv-1)/2)+(w.evolved?1:0)+player.treasureMulti;
     const targets=nearestEnemies(count,player.range+210);
     if(!targets.length)return;
 
@@ -706,7 +815,8 @@ const EVOLUTION_INFO={
   fireball:{name:"☄️ 메테오",desc:"화염구의 피해와 폭발 범위가 증가합니다."},
   shockwave:{name:"🌀 대충격파",desc:"충격파 범위와 피해가 증가하고 재사용 대기시간이 감소합니다."},
   boomerang:{name:"🪃 차원 마법구",desc:"마법구가 추가로 생성되고 피해량이 증가합니다."},
-  blackhole:{name:"🕳️ 초대형 블랙홀",desc:"블랙홀의 범위·피해·지속시간이 증가합니다."}
+  blackhole:{name:"🕳️ 초대형 블랙홀",desc:"블랙홀의 범위·피해·지속시간이 증가합니다."},
+  laser:{name:"🌊 초대형 탈모빔",desc:"더 굵고 길어진 고출력 탈모빔가 직선상의 적을 관통합니다."}
 };
 function evolveWeapon(w){
   if(!w || w.evolved || w.level<EVOLUTION_LEVEL)return false;
@@ -731,13 +841,16 @@ document.getElementById("evolutionClose").onclick=()=>{
   showMessage("🔥 진화한 무기의 힘이 해방되었습니다!");
 };
 
-function showUpgrade(){
+function showUpgrade(source="level"){
+  document.getElementById("upgradeTitle").textContent=source==="silver"?"🩶 은색 상자":"✨ 레벨 업!";
+  document.getElementById("upgradeDesc").textContent=source==="silver"?"보너스 강화! 하나를 선택하세요.":"하나를 선택하세요.";
   const magic=weapons.find(w=>w.type==="magic");
   const shotgun=weapons.find(w=>w.type==="shotgun");
   const fireball=weapons.find(w=>w.type==="fireball");
   const shockwave=weapons.find(w=>w.type==="shockwave");
   const boomerang=weapons.find(w=>w.type==="boomerang");
   const blackhole=weapons.find(w=>w.type==="blackhole");
+  const laser=weapons.find(w=>w.type==="laser");
   const pool=[
     {title:"🔥 공격력 강화",desc:"기본 공격력 +9",apply:()=>player.damageBonus+=9},
     {title:"⚡ 나쫀쿠 강화",desc:`나쫀쿠 Lv.${magic.level+1}${magic.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} (공격력 증가)`,apply:()=>magic.level++},
@@ -749,7 +862,8 @@ function showUpgrade(){
     ...(fireball.level===0?[{title:"☄️ 화염구 획득",desc:"강력한 화염구가 적중 시 주변도 공격",apply:()=>fireball.level=1}]:[{title:"☄️ 화염구 강화",desc:`화염구 Lv.${fireball.level+1}${fireball.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 데미지 및 화염구 증가`,apply:()=>fireball.level++}]),
     ...(shockwave.level===0?[{title:"🌀 충격파 획득",desc:"플레이어 주변의 적에게 피해를 주고 뒤로 밀어냄",apply:()=>shockwave.level=1}]:[{title:"🌀 충격파 강화",desc:`충격파 Lv.${shockwave.level+1}${shockwave.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 범위, 피해, 넉백 증가`,apply:()=>shockwave.level++}]),
     ...(boomerang.level===0?[{title:"🪃 마법구 획득",desc:"전방으로 날아갔다가 플레이어에게 돌아오며 적에게 피해",apply:()=>boomerang.level=1}]:[{title:"🪃 마법구 강화",desc:`마법구 Lv.${boomerang.level+1}${boomerang.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 마법구 증가`,apply:()=>boomerang.level++}]),
-    ...(blackhole.level===0?[{title:"🕳️ 블랙홀 획득",desc:"적을 끌어당기며 주변에 지속 피해를 주는 블랙홀 생성",apply:()=>blackhole.level=1}]:[{title:"🕳️ 블랙홀 강화",desc:`블랙홀 Lv.${blackhole.level+1}${blackhole.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 범위, 피해, 지속시간 증가`,apply:()=>blackhole.level++}])
+    ...(blackhole.level===0?[{title:"🕳️ 블랙홀 획득",desc:"적을 끌어당기며 주변에 지속 피해를 주는 블랙홀 생성",apply:()=>blackhole.level=1}]:[{title:"🕳️ 블랙홀 강화",desc:`블랙홀 Lv.${blackhole.level+1}${blackhole.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 범위, 피해, 지속시간 증가`,apply:()=>blackhole.level++}]),
+    ...(laser.level===0?[{title:"🌊 탈모빔 획득",desc:"플레이어 앞을 길게 가로지르는 에너지파를 발사",apply:()=>laser.level=1}]:[{title:"🌊 탈모빔 강화",desc:`탈모빔 Lv.${laser.level+1}${laser.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 위력과 폭 증가`,apply:()=>laser.level++}])
   ];
   upgrades=[...pool].sort(()=>Math.random()-.5).slice(0,3);
   const box=document.getElementById("cards"); box.innerHTML="";
@@ -772,7 +886,9 @@ function hurtPlayer(d){
 
 function gameOver(){
   running=false;
-   document.getElementById("audioControls").style.display="block";
+  document.getElementById("audioControls").style.display="block";
+  document.getElementById("pauseButton").style.display="none";
+  document.getElementById("pauseMenu").style.display="none";
   paused=false;
   playSfx("gameover");
 
@@ -800,6 +916,22 @@ function showMessage(t){
   clearTimeout(showMessage.timer);showMessage.timer=setTimeout(()=>m.style.opacity=0,1300);
 }
 
+function tryDropSilverChest(enemy){
+  if(Math.random()<SILVER_CHEST_DROP_CHANCE){
+    silverChests.push({x:enemy.x,y:enemy.y,r:20});
+  }
+}
+function collectSilverChest(){
+  // 다른 선택창을 덮지 않으며, 여러 상자도 하나씩 선택한다.
+  if(!running || paused)return;
+  const index=silverChests.findIndex(c=>Math.hypot(player.x-c.x,player.y-c.y)<player.r+c.r+8);
+  if(index<0)return;
+  silverChests.splice(index,1);
+  paused=true;
+  playSfx("treasure");
+  showUpgrade("silver");
+}
+
 function spawnTreasureChest(x,y){
   treasureChest={x,y,r:28,pulse:0};
 }
@@ -819,7 +951,7 @@ function openTreasure(){
     {title:"🔥 파괴의 보물",desc:"공격력 +35",apply:()=>player.damageBonus+=35},
     {title:"❤️ 생명의 보물",desc:"최대 HP +35 · HP 100% 회복",apply:()=>{player.maxHp+=35;player.hp=player.maxHp}},
     {title:"💨 질풍의 보물",desc:"이동속도 +45",apply:()=>player.speed+=45},
-    {title:"🎯 황금의 보물",desc:"공격 사거리 +100 · 투사체 +1",apply:()=>{player.range+=100;player.multi+=1}},
+    {title:"🎯 황금의 보물",desc:"공격 사거리 +100 · 나쫀쿠·산탄총·화염구·마법구 투사체 각각 +1",apply:()=>{player.range+=100;player.multi+=1;player.treasureMulti+=1}},
     {title:"⚡ 번개의 보물",desc:"공격속도 +20% · 모든 무기 쿨다운 감소",apply:()=>player.attackSpeed*=1.2}
   ].sort(()=>Math.random()-.5).slice(0,3);
 
@@ -842,6 +974,21 @@ function openTreasure(){
     box.appendChild(c);
   });
   document.getElementById("treasure").style.display="flex";
+}
+
+function spawnSplitOffspring(parent){
+  const childHp=Math.max(20,parent.maxHp*.30);
+  for(const side of [-1,1]){
+    const angle=Math.atan2(parent.y-player.y,parent.x-player.x)+side*.9;
+    const child={
+      x:parent.x+Math.cos(angle)*22,y:parent.y+Math.sin(angle)*22,
+      r:Math.max(7,parent.r*.68),hp:childHp,maxHp:childHp,
+      speed:parent.speed*1.12,damage:parent.damage*.7,
+      elite:false,splitChild:true
+    };
+    enemies.push(child);
+    for(let i=0;i<5;i++)particles.push({x:child.x,y:child.y,vx:(Math.random()-.5)*150,vy:(Math.random()-.5)*150,life:.35});
+  }
 }
 
 function defeatEnemy(e){
@@ -900,9 +1047,11 @@ function defeatEnemy(e){
     e.defeated=true;
     kills++;
     dropGem(e);
+    if(e.splitter && !e.splitChild)spawnSplitOffspring(e);
   }
 
   enemies.splice(idx,1);
+  tryDropSilverChest(e);
 }
 
 function updateRandomEventHud(){
@@ -980,6 +1129,10 @@ function update(dt){
     if(fx.life<=0)shockwaveEffects.splice(i,1);
   }
   updateDamageMeter();
+  for(let i=laserBeams.length-1;i>=0;i--){
+    laserBeams[i].life-=dt;
+    if(laserBeams[i].life<=0)laserBeams.splice(i,1);
+  }
 
   ultimateFlash=Math.max(0,ultimateFlash-dt);
   for(let i=ultimateEffects.length-1;i>=0;i--){
@@ -1264,11 +1417,14 @@ function update(dt){
   gems=gems.filter(g=>Math.abs(g.x-player.x)<cleanup&&Math.abs(g.y-player.y)<cleanup);
   magnetItems=magnetItems.filter(m=>Math.abs(m.x-player.x)<cleanup&&Math.abs(m.y-player.y)<cleanup);
 
+  collectSilverChest();
+
   document.getElementById("levelText").textContent=`Lv. ${level}`;
   document.getElementById("xpFill").style.width=(xp/xpNeed*100)+"%";
   document.getElementById("hpFill").style.width=(Math.max(0,player.hp/player.maxHp)*100)+"%";
   document.getElementById("stats").textContent=
     `처치 ${kills} · 생존 ${formatTime(elapsed)} · 무기 ${weapons.filter(w=>w.level>0).length} · 적 ${enemies.length}`;
+  document.getElementById("scoreValue").textContent=(Math.floor(elapsed)*10+kills*20).toLocaleString();
   if(boss){
     document.getElementById("bossHud").style.display="block";
     document.getElementById("bossFill").style.width=(Math.max(0,boss.hp/boss.maxHp)*100)+"%";
@@ -1296,6 +1452,44 @@ function draw(){
     ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
   }
 
+
+  for(const beam of laserBeams){
+    const x=sx(beam.x),y=sy(beam.y);
+    const fade=Math.max(0,beam.life/beam.maxLife);
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(beam.angle);
+    ctx.globalCompositeOperation="lighter";
+    ctx.globalAlpha=.9*fade;
+    ctx.lineCap="round";
+    ctx.shadowColor=beam.evolved?"#60a5fa":"#06b6d4";
+    ctx.shadowBlur=beam.width*.9;
+    ctx.strokeStyle=beam.evolved?"rgba(96,165,250,.88)":"rgba(6,182,212,.82)";
+    ctx.lineWidth=beam.width;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(beam.length,0);ctx.stroke();
+    const core=ctx.createLinearGradient(0,0,beam.length,0);
+    if(beam.evolved){
+      core.addColorStop(0,"#dbeafe");core.addColorStop(.45,"#60a5fa");core.addColorStop(.82,"#38bdf8");core.addColorStop(1,"rgba(96,165,250,.25)");
+    }else{
+      core.addColorStop(0,"#ecfeff");core.addColorStop(.48,"#67e8f9");core.addColorStop(.86,"#22d3ee");core.addColorStop(1,"rgba(34,211,238,.2)");
+    }
+    ctx.shadowBlur=12;ctx.strokeStyle=core;ctx.lineWidth=beam.width*.58;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(beam.length,0);ctx.stroke();
+    ctx.shadowBlur=7;ctx.strokeStyle="#fff";ctx.lineWidth=Math.max(5,beam.width*.19);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(beam.length*.97,0);ctx.stroke();
+    // 에너지파 가장자리에 흔들리는 파동선을 더한다.
+    for(const side of [-1,1]){
+      ctx.globalAlpha=.72*fade;ctx.shadowBlur=9;
+      ctx.strokeStyle=beam.evolved?"#dbeafe":"#cffafe";
+      ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(0,side*beam.width*.34);
+      ctx.quadraticCurveTo(beam.length*.28,side*beam.width*.52,beam.length*.52,side*beam.width*.31);
+      ctx.quadraticCurveTo(beam.length*.76,side*beam.width*.48,beam.length,side*beam.width*.25);
+      ctx.stroke();
+    }
+    ctx.globalAlpha=fade;ctx.shadowBlur=beam.width;ctx.fillStyle=beam.evolved?"#bfdbfe":"#a5f3fc";
+    ctx.beginPath();ctx.arc(beam.length,0,beam.width*.32,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
 
   for(const fx of ultimateEffects){
     const x=sx(fx.x),y=sy(fx.y);
@@ -1358,6 +1552,27 @@ function draw(){
     ctx.beginPath();
     ctx.arc(0,2,4,0,Math.PI*2);
     ctx.fill();
+    ctx.restore();
+  }
+
+  for(const chest of silverChests){
+    const x=sx(chest.x),y=sy(chest.y);
+    if(x<-45||x>W+45||y<-45||y>H+45)continue;
+    ctx.save();ctx.translate(x,y);
+    const pulse=1+Math.sin(elapsed*4)*.06;
+    ctx.scale(pulse,pulse);
+    ctx.shadowColor="#e2e8f0";ctx.shadowBlur=18;
+    const metal=ctx.createLinearGradient(0,-15,0,16);
+    metal.addColorStop(0,"#f8fafc");metal.addColorStop(.45,"#cbd5e1");metal.addColorStop(1,"#64748b");
+    ctx.fillStyle=metal;ctx.fillRect(-21,-13,42,29);
+    ctx.shadowBlur=0;ctx.strokeStyle="#f1f5f9";ctx.lineWidth=2;
+    ctx.strokeRect(-21,-13,42,29);
+    ctx.fillStyle="#475569";ctx.fillRect(-20,-3,40,3);
+    ctx.fillStyle="#f8fafc";ctx.fillRect(-4,-7,8,15);
+    ctx.fillStyle="#334155";ctx.fillRect(-1,-2,2,5);
+    ctx.globalAlpha=.6+.4*Math.sin(elapsed*5)**2;
+    ctx.strokeStyle="#fff";ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(25,-24);ctx.lineTo(25,-14);ctx.moveTo(20,-19);ctx.lineTo(30,-19);ctx.stroke();
     ctx.restore();
   }
 
@@ -1435,7 +1650,7 @@ function draw(){
 
   for(const b of bullets){
     const x=sx(b.x),y=sy(b.y);
-    if(x<-30||x>W+30||y<-30||y>H+30)continue;
+    if(x<-60||x>W+60||y<-60||y>H+60)continue;
     const evolvedColor =
       b.evolved && b.source==="magic" ? "#ff8c00" :
       b.evolved && b.source==="fireball" ? "#ff3b30" :
@@ -1489,6 +1704,16 @@ function draw(){
       }
       ctx.filter="none";
       ctx.restore();
+    }else if(e.splitter){
+      ctx.beginPath();ctx.arc(x,y,e.r,0,Math.PI*2);
+      ctx.fillStyle="#22c55e";ctx.fill();
+      ctx.strokeStyle="#bbf7d0";ctx.lineWidth=3;ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,e.r*.48,0,Math.PI*2);
+      ctx.strokeStyle="#ecfccb";ctx.lineWidth=2;ctx.stroke();
+    }else if(e.splitChild){
+      ctx.beginPath();ctx.arc(x,y,e.r,0,Math.PI*2);
+      ctx.fillStyle="#a3e635";ctx.fill();
+      ctx.strokeStyle="#ecfccb";ctx.lineWidth=2;ctx.stroke();
     }else{
       ctx.beginPath();ctx.arc(x,y,e.r,0,Math.PI*2);
       ctx.fillStyle=e.elite?"#a855f7":"#ef476f";ctx.fill();

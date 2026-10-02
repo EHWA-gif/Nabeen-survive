@@ -72,6 +72,7 @@ button:hover{filter:brightness(1.1)}
 #audioControls input[type="range"]{flex:1;min-width:0;accent-color:#58d5ff}
 #audioMute{border:1px solid #465779;background:#172033;color:#fff;border-radius:8px;padding:5px 8px;margin:0;font-size:12px;cursor:pointer}
 #audioMute.muted{background:#3a2028;border-color:#8b4b59;color:#ffb4c4}
+#bgmValue{width:34px;text-align:right;color:#8fa3c7;font-size:11px}
 #audioValue{width:34px;text-align:right;color:#8fa3c7;font-size:11px}
 @media(max-width:700px){#audioControls{right:10px;top:185px;width:190px;padding:8px 10px}}
 #pauseButton{position:absolute;right:252px;top:12px;z-index:20;margin:0;padding:8px 12px;font-size:14px}
@@ -116,8 +117,10 @@ button:hover{filter:brightness(1.1)}
 <div id="audioControls">
   <div class="audio-row"><label>전체</label><input id="masterVolume" type="range" min="0" max="100" value="70"><span id="audioValue">70%</span></div>
   <div class="audio-row"><label>효과음</label><input id="sfxVolume" type="range" min="0" max="100" value="80"></div>
+  <div class="audio-row"><label for="bgmVolume">BGM</label><input id="bgmVolume" type="range" min="0" max="100" value="60"><span id="bgmValue" class="audio-value">60%</span></div>
   <div class="audio-row"><button id="audioMute" type="button">🔊 음소거</button></div>
 </div>
+<audio id="backgroundMusic" src="bgm.mp3" preload="none" loop></audio>
 <button id="pauseButton" type="button" style="display:none" aria-label="일시정지">Ⅱ 일시정지</button>
 <div id="pauseMenu">
   <div class="panel">
@@ -125,6 +128,7 @@ button:hover{filter:brightness(1.1)}
     <p>음량을 조절할 수 있습니다.</p>
     <div class="audio-row"><label for="pauseMasterVolume">전체</label><input id="pauseMasterVolume" type="range" min="0" max="100" value="70"><span id="pauseAudioValue" class="audio-value">70%</span></div>
     <div class="audio-row"><label for="pauseSfxVolume">효과음</label><input id="pauseSfxVolume" type="range" min="0" max="100" value="80"></div>
+    <div class="audio-row"><label for="pauseBgmVolume">BGM</label><input id="pauseBgmVolume" type="range" min="0" max="100" value="60"><span id="pauseBgmValue" class="audio-value">60%</span></div>
     <button id="pauseMute" type="button">🔊 음소거</button><br>
     <button id="resumeButton" type="button">계속하기</button>
   </div>
@@ -201,6 +205,27 @@ let randomEventGemMultiplier=1;
 let audioCtx=null, masterGain=null, bgmGain=null, sfxGain=null;
 let audioMuted=false;
 let masterVolume=.70, sfxVolume=.80, lastEnemySfxTime=0;
+let bgmVolume=.60, bgmPlayPending=false, bgmUnavailable=false;
+const backgroundMusic=document.getElementById("backgroundMusic");
+backgroundMusic.addEventListener("error",()=>{bgmUnavailable=true;});
+function syncBgmPlayback(){
+  if(!running||paused){backgroundMusic.pause();return;}
+  if(bgmUnavailable||bgmPlayPending||!backgroundMusic.paused)return;
+  bgmPlayPending=true;
+  backgroundMusic.play().then(()=>{
+    if(!running||paused)backgroundMusic.pause();
+  }).catch(error=>{
+    // 없는 파일이나 자동재생 제한은 게임과 효과음에 영향을 주지 않는다.
+    bgmUnavailable=true;
+  }).finally(()=>{bgmPlayPending=false;});
+}
+function startBgm(){
+  backgroundMusic.pause();
+  backgroundMusic.currentTime=0;
+  bgmUnavailable=false;
+  updateAudioGains();
+  syncBgmPlayback();
+}
 
 function initAudio(){
   if(audioCtx){if(audioCtx.state==="suspended")audioCtx.resume();return;}
@@ -211,9 +236,16 @@ function initAudio(){
   updateAudioGains();
 }
 function updateAudioGains(){
-  if(!masterGain)return;
-  masterGain.gain.value=audioMuted?0:masterVolume;
-  sfxGain.gain.value=sfxVolume;
+  if(masterGain)masterGain.gain.value=audioMuted?0:masterVolume;
+  if(sfxGain)sfxGain.gain.value=sfxVolume;
+  backgroundMusic.volume=masterVolume*bgmVolume;
+  backgroundMusic.muted=audioMuted;
+  for(const id of ["bgmVolume","pauseBgmVolume"]){
+    const input=document.getElementById(id);if(input)input.value=String(Math.round(bgmVolume*100));
+  }
+  for(const id of ["bgmValue","pauseBgmValue"]){
+    const value=document.getElementById(id);if(value)value.textContent=`${Math.round(bgmVolume*100)}%`;
+  }
   const pct=`${Math.round(masterVolume*100)}%`;
   const v=document.getElementById("audioValue");if(v)v.textContent=pct;
   const pauseValue=document.getElementById("pauseAudioValue");if(pauseValue)pauseValue.textContent=pct;
@@ -230,6 +262,7 @@ function setAudioParam(param,value){
   value=Math.max(0,Math.min(1,value));
   if(param==="master")masterVolume=value;
   else if(param==="sfx")sfxVolume=value;
+  else if(param==="bgm")bgmVolume=value;
   initAudio();updateAudioGains();
 }
 function tone(freq,duration,type="sine",volume=.08,when=0,slideTo=null){
@@ -273,7 +306,8 @@ function playSfx(name){
 function initAudioControls(){
   const controls=[
     ["masterVolume","master"],["pauseMasterVolume","master"],
-    ["sfxVolume","sfx"],["pauseSfxVolume","sfx"]
+    ["sfxVolume","sfx"],["pauseSfxVolume","sfx"],
+    ["bgmVolume","bgm"],["pauseBgmVolume","bgm"]
   ];
   for(const [id,param] of controls){
     const input=document.getElementById(id);
@@ -287,6 +321,7 @@ function initAudioControls(){
   document.getElementById("resumeButton").addEventListener("click",resumeGame);
 }
 initAudioControls();
+updateAudioGains();
 
 function resize(){
   const r=gameEl.getBoundingClientRect();
@@ -373,6 +408,7 @@ function startGame(){
   document.getElementById("upgrade").style.display="none";
   last=performance.now(); requestAnimationFrame(loop);
   initAudio();
+  startBgm();
   playSfx("start");
   showMessage("생존을 시작하세요!");
 }
@@ -896,6 +932,7 @@ function hurtPlayer(d){
 
 function gameOver(){
   running=false;
+  syncBgmPlayback();
   document.getElementById("audioControls").style.display="block";
   document.getElementById("pauseButton").style.display="none";
   document.getElementById("pauseMenu").style.display="none";
@@ -1850,6 +1887,7 @@ function loop(now){
   if(!running)return;
   const dt=Math.min(.033,(now-last)/1000);last=now;
   if(!paused)update(dt);
+  syncBgmPlayback();
   draw();
   requestAnimationFrame(loop);
 }

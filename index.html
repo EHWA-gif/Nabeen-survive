@@ -84,6 +84,11 @@ button:hover{filter:brightness(1.1)}
 #pauseMenu .audio-value{width:40px;text-align:right;color:#8fa3c7;font-size:12px}
 #pauseMenu #pauseMute{margin:8px 0 0;padding:8px 12px;font-size:13px}
 @media(max-width:700px){#pauseButton{right:10px;top:245px}}
+#evolutionNotice .evolution-panel{width:min(760px,92%);max-height:90%;overflow:auto}
+#evolutionCards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.evolution-choice{margin:0;padding:22px;text-align:left;background:#14233b;border:2px solid #587493;border-radius:14px;white-space:normal;cursor:pointer}
+.evolution-choice:hover{border-color:#67e8f9;background:#1c3353}.evolution-choice strong{display:block;font-size:23px;color:#fff3a3;margin-bottom:12px}.evolution-choice span{display:block;font-size:15px;line-height:1.6;color:#d1e4fa}.evolution-choice small{display:block;font-size:12px;color:#8eb9d9;margin-top:15px}
+@media(max-width:700px){#evolutionCards{grid-template-columns:1fr}.evolution-choice{padding:14px}.evolution-choice strong{font-size:19px}}
 </style>
 </head>
 <body>
@@ -129,8 +134,9 @@ button:hover{filter:brightness(1.1)}
     <div class="audio-row"><label for="pauseMasterVolume">전체</label><input id="pauseMasterVolume" type="range" min="0" max="100" value="70"><span id="pauseAudioValue" class="audio-value">70%</span></div>
     <div class="audio-row"><label for="pauseSfxVolume">효과음</label><input id="pauseSfxVolume" type="range" min="0" max="100" value="80"></div>
     <div class="audio-row"><label for="pauseBgmVolume">BGM</label><input id="pauseBgmVolume" type="range" min="0" max="100" value="60"><span id="pauseBgmValue" class="audio-value">60%</span></div>
+    <div class="audio-row"><label for="evolutionVfxQuality" style="width:90px">진화 이펙트</label><select id="evolutionVfxQuality" style="flex:1;background:#172033;color:#fff;padding:7px;border:1px solid #526788;border-radius:6px"><option value="rich">풍부하게</option><option value="light">절제해서</option></select></div>
     <button id="pauseMute" type="button">🔊 음소거</button><br>
-    <button id="resumeButton" type="button">계속하기</button>
+    <div id="evolutionBuilds" style="white-space:pre-line;font-size:13px;line-height:1.7;color:#a5d8f3;margin-top:12px">선택한 진화: 없음</div><button id="resumeButton" type="button">계속하기</button>
   </div>
 </div>
 <div id="centerMsg">
@@ -160,7 +166,7 @@ button:hover{filter:brightness(1.1)}
     <h1>✨ 무기 진화!</h1>
     <div class="evo-name" id="evolutionName"></div>
     <p id="evolutionDesc"></p>
-    <button id="evolutionClose" type="button">진화 확인</button>
+    <div id="evolutionCards"></div>
   </div>
 </div>
 <div id="message"></div>
@@ -375,6 +381,7 @@ function resumeGame(){
 }
 
 function startGame(){
+  evfxReset();branchReset();
   running=true; paused=false; elapsed=0;kills=0;level=1;xp=0;xpNeed=8;weaponLevel=1;
   document.getElementById("audioControls").style.display="none";
   document.getElementById("pauseButton").style.display="block";
@@ -653,9 +660,10 @@ function nearestEnemies(count, range){
     .sort((a,b)=>((a.x-player.x)**2+(a.y-player.y)**2)-((b.x-player.x)**2+(b.y-player.y)**2)).slice(0,count);
 }
 function addBullet(angle, damage, speed, r, life, kind="normal", splash=0, evolved=false){
+  if(evolved)evfxCast(kind,player.x,player.y,angle);
   bullets.push({x:player.x+Math.cos(angle)*20,y:player.y+Math.sin(angle)*20,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r,damage,life,kind,splash,evolved,source:kind==="shotgun"?"shotgun":kind==="fireball"?"fireball":kind==="boomerang"?"boomerang":"magic"});
 }
-function shootWeapon(w){
+function shootWeaponBase(w){
   const lv=w.level;
   if(lv<=0)return;
   if(w.type==="magic"){
@@ -707,6 +715,7 @@ function shootWeapon(w){
         if(e.hp<=0)defeatEnemy(e);
       }
     }
+    if(w.evolved)evfxCast("laser",player.x,player.y,angle);
     laserBeams.push({x:player.x,y:player.y,angle,length,width,life:w.evolved?.30:.23,maxLife:w.evolved?.30:.23,evolved:w.evolved});
     w.cooldown=Math.max(.65,1.45-lv*.055)/player.attackSpeed;
   }else if(w.type==="shockwave"){
@@ -761,6 +770,7 @@ function shootWeapon(w){
   }
 
   shockwaveEffects.push({
+    evolved:w.evolved,
     x:player.x,
     y:player.y,
     radius:0,
@@ -823,6 +833,7 @@ function shootWeapon(w){
         r:radius,
         life:duration,
         maxLife:duration,
+        evolved:w.evolved,
         damage,
         pull,
         hitTimer:0
@@ -864,29 +875,13 @@ const EVOLUTION_INFO={
   blackhole:{name:"🕳️ 초대형 블랙홀",desc:"블랙홀의 범위·피해·지속시간이 증가합니다."},
   laser:{name:"🌊 초대형 탈모빔",desc:"더 굵고 길어진 고출력 탈모빔가 직선상의 적을 관통합니다."}
 };
-function evolveWeapon(w){
-  if(!w || w.evolved || w.level<EVOLUTION_LEVEL)return false;
-  w.evolved=true; evolutionPending=true;
-  const info=EVOLUTION_INFO[w.type];
-  document.getElementById("evolutionName").textContent=info.name;
-  document.getElementById("evolutionDesc").textContent=info.desc;
-  document.getElementById("evolutionNotice").style.display="flex";
-  paused=true;
-  showMessage(`✨ ${info.name} 진화!`);
-  return true;
-}
+function evolveWeapon(w){return showEvolutionChoice(w);}
 function checkWeaponEvolution(){
   for(const w of weapons){
     if(w.level>=EVOLUTION_LEVEL && !w.evolved)return evolveWeapon(w);
   }
   return false;
 }
-document.getElementById("evolutionClose").onclick=()=>{
-  document.getElementById("evolutionNotice").style.display="none";
-  evolutionPending=false; paused=false; last=performance.now();
-  showMessage("🔥 진화한 무기의 힘이 해방되었습니다!");
-};
-
 function showUpgrade(source="level"){
   document.getElementById("upgradeTitle").textContent=source==="silver"?"🩶 은색 상자":"✨ 레벨 업!";
   document.getElementById("upgradeDesc").textContent=source==="silver"?"보너스 강화! 하나를 선택하세요.":"하나를 선택하세요.";
@@ -911,6 +906,8 @@ function showUpgrade(source="level"){
     ...(blackhole.level===0?[{title:"🕳️ 블랙홀 획득",desc:"적을 끌어당기며 주변에 지속 피해를 주는 블랙홀 생성",apply:()=>blackhole.level=1}]:[{title:"🕳️ 블랙홀 강화",desc:`블랙홀 Lv.${blackhole.level+1}${blackhole.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 범위, 피해, 지속시간 증가`,apply:()=>blackhole.level++}]),
     ...(laser.level===0?[{title:"🌊 탈모빔 획득",desc:"플레이어 앞을 길게 가로지르는 에너지파를 발사",apply:()=>laser.level=1}]:[{title:"🌊 탈모빔 강화",desc:`탈모빔 Lv.${laser.level+1}${laser.level+1===EVOLUTION_LEVEL?" · 진화 가능":""} · 위력과 폭 증가`,apply:()=>laser.level++}])
   ];
+  const branchNames={magic:"나쫀쿠",shotgun:"산탄총",fireball:"화염구",shockwave:"충격파",boomerang:"마법구",blackhole:"블랙홀",laser:"탈모빔"};
+  for(const w of weapons){if(w.branch!=="alt")continue;for(const u of pool)if(u.title.includes(branchNames[w.type]))u.desc=`${ALT_EVOLUTION_INFO[w.type].name} Lv.${w.level+1} · 선택한 진화의 성능 강화`;}
   upgrades=[...pool].sort(()=>Math.random()-.5).slice(0,3);
   const box=document.getElementById("cards"); box.innerHTML="";
   upgrades.forEach(u=>{
@@ -1014,7 +1011,8 @@ function openTreasure(){
       treasureChest=null;
       treasureChoices=[];
       document.getElementById("treasure").style.display="none";
-      paused=false;
+      if(!evolutionPending)checkWeaponEvolution();
+      paused=evolutionPending;
       last=performance.now();
       showMessage("✨ 보물의 힘을 얻었습니다!");
     };
@@ -1170,6 +1168,7 @@ function updateRandomEvent(dt){
 }
 
 function update(dt){
+  evfxUpdate(dt);
   elapsed+=dt; hitCooldown=Math.max(0,hitCooldown-dt);
   updateRandomEvent(dt);
   for(let i=shockwaveEffects.length-1;i>=0;i--){
@@ -1184,6 +1183,7 @@ function update(dt){
     if(laserBeams[i].life<=0)laserBeams.splice(i,1);
   }
 
+  branchUpdate(dt);
   ultimateFlash=Math.max(0,ultimateFlash-dt);
   for(let i=ultimateEffects.length-1;i>=0;i--){
     const fx=ultimateEffects[i];
@@ -1263,7 +1263,10 @@ function update(dt){
       }
     }
 
-    if(bh.life<=0)blackholes.splice(i,1);
+    if(bh.life<=0){
+      if(bh.collapse){for(const e of [...enemies])if(Math.hypot(e.x-bh.x,e.y-bh.y)<=bh.r+e.r)branchDamage(e,bh.burstDamage,"blackhole");evfxEmit("blackhole",bh.x,bh.y,bh.r,"ascend");}
+      blackholes.splice(i,1);
+    }
   }
 
   if(treasureChest){
@@ -1356,6 +1359,7 @@ function update(dt){
           e.hp-=dealt;
           if(e.boss)e.hitFlash=.12;
           recordDamage("boomerang",dealt);
+          if(b.evolved)evfxEmit("boomerang",b.x,b.y,35);
           hitList.push(e);
           for(let k=0;k<6;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.3});
           if(e.hp<=0){defeatEnemy(e);}
@@ -1364,12 +1368,15 @@ function update(dt){
     }else{
       for(let j=enemies.length-1;j>=0&&!remove;j--){
         const e=enemies[j];
+        if(b.chainHits?.includes(e))continue;
         if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r){
           const dealt=Math.min(e.hp,b.damage);
           e.hp-=dealt;
           if(e.boss)e.hitFlash=.12;
           recordDamage(b.source,dealt);
-          remove=true;
+          if(b.evolved)evfxEmit(b.source,b.x,b.y,b.splash>0?b.splash:30,b.splash>0?"fire":"impact");
+          remove=!branchChain(b,e);
+          if(b.burning)fireZones.push({x:b.x,y:b.y,r:b.splash*.8,damage:b.damage*.22,life:2.5,tick:.4});
           for(let k=0;k<6;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.3});
               if(b.splash>0){
             const splashTargets=[...enemies];
@@ -1503,6 +1510,8 @@ function draw(){
   }
 
 
+  drawBranchEffects(sx,sy);
+  drawEvolutionVfx(sx,sy);
   for(const beam of laserBeams){
     const x=sx(beam.x),y=sy(beam.y);
     const fade=Math.max(0,beam.life/beam.maxLife);
@@ -1892,6 +1901,226 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 document.getElementById("startBtn").onclick=startGame;
+// Purely cosmetic: separate clock, fixed patterns, no gameplay random numbers.
+const EVFX_COLORS={magic:['#ffd54a','#a5f3fc'],shotgun:['#d8b4fe','#ffb86c'],fireball:['#ff6b35','#ffe9a3'],shockwave:['#22d3ee','#e0faff'],boomerang:['#60a5fa','#dbeafe'],blackhole:['#c084fc','#67e8f9'],laser:['#38bdf8','#ffffff']};
+let evolutionVfx=[],evolutionVfxClock=0,evolutionVfxLevel='rich';
+let evolutionVfxLast=Object.create(null);
+function evfxReset(){evolutionVfx=[];evolutionVfxClock=0;evolutionVfxLast=Object.create(null);}
+function evfxEmit(kind,x,y,radius,style='impact',angle=0){
+  const cap=evolutionVfxLevel==='rich'?100:40;
+  if(evolutionVfx.length>=cap)evolutionVfx.shift();
+  const duration=style==='ascend'?1.1:style==='fire'?.55:style==='cast'?.22:.3;
+  evolutionVfx.push({kind,x,y,radius,style,angle,life:duration,maxLife:duration});
+}
+function evfxCast(kind,x,y,angle=0){
+  if(evolutionVfxClock-(evolutionVfxLast[kind]??-10)<.09)return;
+  evolutionVfxLast[kind]=evolutionVfxClock;
+  evfxEmit(kind,x,y,kind==='shotgun'?90:36,'cast',angle);
+}
+function evfxUpdate(dt){
+  evolutionVfxClock+=dt;
+  for(let i=evolutionVfx.length-1;i>=0;i--){evolutionVfx[i].life-=dt;if(evolutionVfx[i].life<=0)evolutionVfx.splice(i,1);}
+  const step=evolutionVfxLevel==='rich'?.035:.07;
+  // Trail history is bounded and never participates in collisions.
+  for(const b of bullets){if(!b.evolved)continue;b.vfxTrailTimer=(b.vfxTrailTimer||0)-dt;if(b.vfxTrailTimer<=0){b.vfxTrailTimer=step;if(!b.vfxTrail)b.vfxTrail=[];b.vfxTrail.push({x:b.x,y:b.y});if(b.vfxTrail.length>7)b.vfxTrail.shift();}}
+}
+function evfxStar(x,y,r,angle,color){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.strokeStyle=color;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(r,0);ctx.moveTo(0,-r);ctx.lineTo(0,r);ctx.stroke();ctx.restore();
+}
+function evfxRing(x,y,r,color,width=2){ctx.beginPath();ctx.arc(x,y,Math.max(0,r),0,Math.PI*2);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
+function drawEvolutionVfx(sx,sy){
+  const rich=evolutionVfxLevel==='rich',time=evolutionVfxClock;
+  ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';ctx.lineJoin='round';
+  let drawn=0;const bulletLimit=rich?100:45;
+  for(const b of bullets){
+    if(!b.evolved||drawn++>=bulletLimit)continue;
+    const x=sx(b.x),y=sy(b.y);if(x< -100||x>W+100||y< -100||y>H+100)continue;
+    const colors=EVFX_COLORS[b.source]||EVFX_COLORS.magic;
+    ctx.shadowBlur=0;
+    const trail=b.vfxTrail||[];
+    for(let i=1;i<trail.length;i++){
+      ctx.globalAlpha=(i/trail.length)*.5;ctx.strokeStyle=colors[0];ctx.lineWidth=(b.kind==='fireball'?b.r*.9:b.kind==='boomerang'?8:Math.max(2,b.r*.75))*i/trail.length;
+      ctx.beginPath();ctx.moveTo(sx(trail[i-1].x),sy(trail[i-1].y));ctx.lineTo(sx(trail[i].x),sy(trail[i].y));ctx.stroke();
+    }
+    ctx.globalAlpha=.7;
+    if(b.kind==='fireball'){
+      const angle=Math.atan2(b.vy,b.vx);ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+      const halo=ctx.createRadialGradient(0,0,b.r*.25,0,0,b.r*2);halo.addColorStop(0,'#fff3b999');halo.addColorStop(.45,'#ff601955');halo.addColorStop(1,'#ff601900');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(0,0,b.r*2,0,Math.PI*2);ctx.fill();
+      for(let i=0;i<(rich?5:3);i++){ctx.globalAlpha=.7-i*.1;ctx.fillStyle=i%2?colors[0]:colors[1];const len=b.r*(1.2+i*.28);ctx.beginPath();ctx.moveTo(-b.r*.3,-b.r*.35);ctx.quadraticCurveTo(-len*1.8,b.r*Math.sin(time*18+i)*.7,-len*2.4,0);ctx.quadraticCurveTo(-len*1.8,-b.r*Math.cos(time*16+i)*.7,-b.r*.3,b.r*.35);ctx.fill();}ctx.restore();
+    }else if(b.kind==='boomerang'){
+      ctx.save();ctx.translate(x,y);ctx.rotate(time*5);ctx.strokeStyle=colors[0];ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<=6;i++){const a=i*Math.PI/3,px=Math.cos(a)*(b.r+9),py=Math.sin(a)*(b.r+9);if(!i)ctx.moveTo(px,py);else ctx.lineTo(px,py);}ctx.stroke();evfxRing(0,0,b.r+4,colors[1],1);ctx.restore();
+    }else{
+      const a=Math.atan2(b.vy,b.vx);evfxStar(x,y,b.r+5,time*5+a,colors[1]);
+      if(rich){ctx.globalAlpha=.4;const px=x-Math.cos(a)*14,py=y-Math.sin(a)*14;evfxStar(px,py,3,time*4,colors[0]);}
+    }
+  }
+  for(const bh of blackholes){
+    if(!bh.evolved)continue;const x=sx(bh.x),y=sy(bh.y);if(x< -bh.r||x>W+bh.r||y< -bh.r||y>H+bh.r)continue;
+    const fade=Math.min(1,bh.life/.45);ctx.save();ctx.translate(x,y);ctx.globalAlpha=.6*fade;ctx.shadowBlur=rich?12:0;ctx.shadowColor='#c084fc';
+    ctx.strokeStyle='#c084fc';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,bh.r*.94,bh.r*.31,-.35,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#67e8f9';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(0,0,bh.r*.86,bh.r*.25,-.35,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
+    for(let arm=0;arm<(rich?4:2);arm++){ctx.beginPath();for(let i=0;i<=28;i++){const t=i/28,r=bh.r*(.18+t*.7),a=time*1.6+arm*Math.PI/2+t*5;const px=Math.cos(a)*r,py=Math.sin(a)*r*.7;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}ctx.strokeStyle=arm%2?'#c084fc':'#818cf8';ctx.lineWidth=2;ctx.stroke();}
+    for(let i=0;i<(rich?12:6);i++){const phase=(time*.55+i/12)%1,r=bh.r*(1-phase)*.9,a=time+i*2.399;ctx.globalAlpha=(1-phase)*.8;evfxStar(Math.cos(a)*r,Math.sin(a)*r*.65,2+phase*3,a,'#e9d5ff');}ctx.restore();
+  }
+  for(const beam of laserBeams){
+    if(!beam.evolved)continue;const fade=Math.max(0,beam.life/beam.maxLife);ctx.save();ctx.translate(sx(beam.x),sy(beam.y));ctx.rotate(beam.angle);ctx.globalAlpha=fade*.65;ctx.shadowBlur=0;
+    for(const side of [-1,1]){
+      ctx.strokeStyle='#a5f3fc';ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<=22;i++){const x=beam.length*i/22,y=side*(beam.width*.6)+Math.sin(i*2.1+time*55)*beam.width*.15;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+      if(rich){ctx.strokeStyle='#60a5fa';ctx.lineWidth=1;ctx.beginPath();for(let i=0;i<=32;i++){const x=beam.length*i/32,y=Math.sin(i*.6+time*32+side)*beam.width*.4;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
+    }
+    for(let i=0;i<(rich?5:3);i++){const x=beam.length*((time*3+i/5)%1);ctx.globalAlpha=fade*.7;evfxStar(x,Math.sin(time*25+i)*beam.width*.5,5,time*4,'#e0faff');}
+    ctx.globalAlpha=fade*.7;evfxRing(0,0,beam.width*.75,'#a5f3fc',3);evfxRing(0,0,beam.width*.98,'#60a5fa',1.5);evfxStar(0,0,beam.width*1.05,time*3,'#fff');ctx.restore();
+  }
+  for(const fx of shockwaveEffects){
+    if(!fx.evolved)continue;const x=sx(fx.x),y=sy(fx.y),progress=1-fx.life/fx.maxLife;
+    ctx.globalAlpha=(1-progress)*.65;ctx.shadowBlur=0;
+    for(let i=0;i<3;i++)evfxRing(x,y,Math.max(0,(fx.r||0)-i*22),'#a5f3fc',i===0?4:1.5);
+    for(let i=0;i<(rich?18:9);i++){const a=i*Math.PI*2/(rich?18:9);const r=fx.r||0;ctx.strokeStyle=i%2?'#67e8f9':'#ffffff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+Math.cos(a)*r*.85,y+Math.sin(a)*r*.85);ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);ctx.stroke();}
+  }
+  ctx.shadowBlur=0;
+  for(const fx of evolutionVfx){
+    const p=1-fx.life/fx.maxLife,fade=(1-p),x=sx(fx.x),y=sy(fx.y),colors=EVFX_COLORS[fx.kind]||EVFX_COLORS.magic;
+    if(x< -fx.radius-50||x>W+fx.radius+50||y< -fx.radius-50||y>H+fx.radius+50)continue;
+    ctx.globalAlpha=fade*.7;ctx.save();ctx.translate(x,y);
+    if(fx.style==='cast'&&fx.kind==='shotgun'){
+      ctx.rotate(fx.angle);ctx.strokeStyle=colors[0];ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,fx.radius*(.3+p*.7),-1.1,1.1);ctx.stroke();
+      for(let i=0;i<(rich?9:5);i++){const a=-1.1+i*2.2/(rich?8:4);ctx.strokeStyle=colors[1];ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(Math.cos(a)*12,Math.sin(a)*12);ctx.lineTo(Math.cos(a)*fx.radius*(.4+p*.6),Math.sin(a)*fx.radius*(.4+p*.6));ctx.stroke();}
+    }else{
+      const r=fx.radius*(.2+.8*p);
+      evfxRing(0,0,r,colors[0],fx.style==='fire'?6:3);evfxRing(0,0,r*.7,colors[1],1.5);
+      if(fx.style==='fire'||fx.style==='ascend'){
+        const halo=ctx.createRadialGradient(0,0,0,0,0,Math.max(1,r));halo.addColorStop(0,fx.style==='fire'?'#fff4af55':'#a5f3fc22');halo.addColorStop(1,'#ffffff00');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();
+      }
+      const count=fx.style==='ascend'?(rich?24:12):(rich?10:5);
+      for(let i=0;i<count;i++){const a=i*Math.PI*2/count+fx.angle+(fx.style==='ascend'?p*1.5:0),rr=r*(.7+(i%3)*.15);evfxStar(Math.cos(a)*rr,Math.sin(a)*rr,fx.style==='ascend'?5:3,a+p,colors[i%2]);}
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+document.getElementById('evolutionVfxQuality').onchange=e=>{evolutionVfxLevel=e.target.value;};
+
+const ALT_EVOLUTION_INFO={
+ magic:{name:'⚡ 연쇄 나쫀쿠',desc:'투사체가 최대 2번 다른 적에게 튕깁니다. 튕길 때마다 피해가 25% 감소합니다. 같은 적을 다시 맞히지 않습니다.'},
+ shotgun:{name:'🌪️ 회전 산탄',desc:'같은 수의 산탄을 전방 대신 360도로 발사합니다. 탄환당 피해는 기존 진화의 80%입니다.'},
+ fireball:{name:'🔥 불지옥',desc:'폭발 피해는 기존 진화의 80%. 폭발 지점에 2.5초 동안 불바닥을 남겨 0.4초마다 추가 피해를 줍니다.'},
+ shockwave:{name:'🔷 진동 결계',desc:'기존 진화 범위의 60%인 결계가 플레이어를 따라옵니다. 기본 0.45초마다 기존 진화 피해의 25%를 주며 밀쳐내지 않습니다. 공격속도에 따라 빨라집니다.'},
+ boomerang:{name:'🪐 위성 마법구',desc:'마법구가 플레이어 주변을 공전합니다. 접촉 피해는 기존 진화의 55%, 각 마법구의 기본 재타격 간격은 0.45초이며 공격속도에 따라 빨라집니다.'},
+ blackhole:{name:'💥 붕괴 블랙홀',desc:'지속 피해는 기존 진화의 70%. 종료 직전 폭발 범위를 표시하고, 종료 시 기존 진화 1회 피해의 3배로 폭발합니다.'},
+ laser:{name:'🌀 회전 탈모빔',desc:'기존 길이를 유지하며 0.6초 동안 약 90도를 훑습니다. 폭은 기존 진화의 60%, 피해는 75%. 한 발사당 각 적은 한 번만 맞습니다.'}
+};
+let pendingEvolutionWeapon=null,fireZones=[],orbitOrbs=[],sweepingBeams=[];
+function branchReset(){pendingEvolutionWeapon=null;fireZones=[];orbitOrbs=[];sweepingBeams=[];evolutionPending=false;document.getElementById('evolutionNotice').style.display='none';document.getElementById('evolutionBuilds').textContent='선택한 진화: 없음';}
+function showEvolutionChoice(w){
+ if(!w||w.evolved||w.level<EVOLUTION_LEVEL)return false;
+ if(pendingEvolutionWeapon)return true;
+ pendingEvolutionWeapon=w;evolutionPending=true;paused=true;
+ const classic=EVOLUTION_INFO[w.type],alt=ALT_EVOLUTION_INFO[w.type];
+ document.getElementById('evolutionName').textContent='2가지 진화 중 하나를 선택하세요';
+ document.getElementById('evolutionDesc').textContent='이번 판에서는 선택한 진화를 변경할 수 없습니다.';
+ const box=document.getElementById('evolutionCards');box.innerHTML='';
+ for(const [branch,info] of [['classic',classic],['alt',alt]]){
+  const button=document.createElement('button');button.type='button';button.className='evolution-choice';
+  button.innerHTML=`<strong>${info.name}</strong><span>${info.desc}</span><small>${branch==='classic'?'기존 진화 · 원래 성능 유지':'새 진화 · 다른 공격 방식'}</small>`;
+  button.onclick=()=>{
+   if(pendingEvolutionWeapon!==w||w.evolved)return;
+   w.evolved=true;w.branch=branch;document.getElementById('evolutionBuilds').textContent='선택한 진화\n'+weapons.filter(item=>item.evolved).map(item=>(item.branch==='alt'?ALT_EVOLUTION_INFO:EVOLUTION_INFO)[item.type].name).join('\n');pendingEvolutionWeapon=null;evolutionPending=false;
+   evfxEmit(w.type,player.x,player.y,140,'ascend');playSfx('upgrade');
+   document.getElementById('evolutionNotice').style.display='none';
+   showMessage(`${info.name} 진화!`);
+   if(!checkWeaponEvolution()){paused=false;last=performance.now();}
+  };box.appendChild(button);
+ }
+ document.getElementById('evolutionNotice').style.display='flex';return true;
+}
+function branchDamage(enemy,damage,source){
+ if(!enemies.includes(enemy)||enemy.hp<=0)return;
+ const dealt=Math.min(enemy.hp,damage);enemy.hp-=dealt;recordDamage(source,dealt);if(enemy.boss)enemy.hitFlash=.12;if(enemy.hp<=0)defeatEnemy(enemy);
+}
+function shootWeapon(w){
+ if(w.branch!=='alt'){shootWeaponBase(w);return;}
+ const lv=w.level;
+ if(['magic','fireball','blackhole'].includes(w.type)){
+  const before=bullets.length,beforeHoles=blackholes.length;shootWeaponBase(w);
+  for(let i=before;i<bullets.length;i++){
+   const b=bullets[i];
+  if(w.type==='magic'){
+  b.damage *= 0.6; // 연쇄 나쫀쿠 기본 피해 배율
+  b.chainLeft = 2;
+  b.chainHits = [];
+}
+   if(w.type==='fireball'){b.burning=true;b.damage*=.8;}
+  }
+  if(w.type==='blackhole')for(let i=beforeHoles;i<blackholes.length;i++){blackholes[i].collapse=true;blackholes[i].burstDamage=blackholes[i].damage*3;blackholes[i].damage*=.7;}
+  return;
+ }
+ if(w.type==='shotgun'){
+  if(!nearestEnemies(1,player.range+100).length)return;
+  const n=4+lv+2+player.treasureMulti,damage=(95+lv*25+player.damageBonus)*1.25*.8;
+  noise(.08,.08,0,700);evfxEmit('shotgun',player.x,player.y,95,'impact');
+  for(let i=0;i<n;i++)addBullet(evolutionVfxClock*.5+i*Math.PI*2/n,damage,700,9,1.6,'shotgun',0,true);
+  w.cooldown=Math.max(.65,1.68-lv*.08)/player.attackSpeed;return;
+ }
+ if(w.type==='shockwave'||w.type==='boomerang'){
+  w.cooldown=w.type==='shockwave'?2.5/player.attackSpeed:Math.max(.7,1.5-lv*.08)/player.attackSpeed;return;
+ }
+ if(w.type==='laser'){
+  const target=nearestEnemies(1,player.range+210)[0];if(!target)return;
+  const base=Math.atan2(target.y-player.y,target.x-player.x);
+  const beam={x:player.x,y:player.y,angle:base-Math.PI/4,length:player.range+400,width:(40+Math.min(lv,8)*1.5)*1.55*.6,life:.6,maxLife:.6,evolved:true};
+  laserBeams.push(beam);sweepingBeams.push({beam,base,hits:new Set(),damage:(115+lv*40+player.damageBonus*.45)*1.45*.75});
+  tone(240,.12,'sawtooth',.055,0,480);tone(520,.16,'triangle',.045,.035,1180);
+  w.cooldown=Math.max(.65,1.45-lv*.055)/player.attackSpeed;
+ }
+}
+function branchChain(b,enemy){
+ if(b.chainLeft===undefined)return false;
+ b.chainHits.push(enemy);
+ if(b.chainLeft<=0)return false;
+ let next=null,d=260;
+ for(const e of enemies){if(e.hp<=0||b.chainHits.includes(e))continue;const distance=Math.hypot(e.x-b.x,e.y-b.y);if(distance<d){d=distance;next=e;}}
+ if(!next)return false;
+ b.chainLeft--;b.damage*=.75;const angle=Math.atan2(next.y-b.y,next.x-b.x),speed=Math.hypot(b.vx,b.vy);b.vx=Math.cos(angle)*speed;b.vy=Math.sin(angle)*speed;
+ b.life=Math.max(b.life,.6);evfxEmit('magic',b.x,b.y,40,'impact');return true;
+}
+function branchUpdate(dt){
+ for(let i=fireZones.length-1;i>=0;i--){
+  const z=fireZones[i];z.life-=dt;z.tick-=dt;
+  if(z.tick<=0&&z.life>0){z.tick=.4;for(const e of [...enemies])if(Math.hypot(e.x-z.x,e.y-z.y)<=z.r+e.r)branchDamage(e,z.damage,'fireball');}
+  if(z.life<=0)fireZones.splice(i,1);
+ }
+ const aura=weapons.find(w=>w.type==='shockwave'&&w.branch==='alt');
+ if(aura){aura.auraTimer=(aura.auraTimer||0)-dt;const radius=(180+aura.level*20+30+Math.min(Math.max(player.range-520,0),500)*.35)*.6;
+  if(aura.auraTimer<=0){aura.auraTimer=.45/player.attackSpeed;for(const e of [...enemies])if(Math.hypot(e.x-player.x,e.y-player.y)<=radius+e.r)branchDamage(e,(45+aura.level*18+player.damageBonus*.45)*1.30*.25,'shockwave');evfxEmit('shockwave',player.x,player.y,radius,'impact');}
+ }
+ const orbital=weapons.find(w=>w.type==='boomerang'&&w.branch==='alt');
+ if(orbital){
+  const count=1+Math.floor((orbital.level-1)/2)+1+player.treasureMulti;
+  while(orbitOrbs.length<count)orbitOrbs.push({hits:new WeakMap()});orbitOrbs.length=count;
+  for(let i=0;i<count;i++){
+   const orb=orbitOrbs[i],angle=evolutionVfxClock*1.8+i*Math.PI*2/count,radius=115+orbital.level*5;orb.x=player.x+Math.cos(angle)*radius;orb.y=player.y+Math.sin(angle)*radius;
+   for(const e of [...enemies])if(Math.hypot(e.x-orb.x,e.y-orb.y)<17+e.r&&(orb.hits.get(e)||0)<=evolutionVfxClock){orb.hits.set(e,evolutionVfxClock+.45/player.attackSpeed);branchDamage(e,(70+orbital.level*20+player.damageBonus)*1.30*.55,'boomerang');evfxEmit('boomerang',orb.x,orb.y,30);}
+  }
+ }else orbitOrbs=[];
+ for(let i=sweepingBeams.length-1;i>=0;i--){
+  const sweep=sweepingBeams[i],b=sweep.beam;if(b.life<=0){sweepingBeams.splice(i,1);continue;}
+  b.angle=sweep.base-Math.PI/4+(1-b.life/b.maxLife)*Math.PI/2;
+  const ux=Math.cos(b.angle),uy=Math.sin(b.angle);
+  for(const e of [...enemies]){if(sweep.hits.has(e))continue;const dx=e.x-b.x,dy=e.y-b.y,along=dx*ux+dy*uy,across=Math.abs(dx*uy-dy*ux);
+   if(along>=0&&along<=b.length&&across<=b.width/2+e.r){sweep.hits.add(e);branchDamage(e,sweep.damage,'laser');}}
+ }
+}
+function drawBranchEffects(sx,sy){
+ ctx.save();ctx.globalCompositeOperation='lighter';
+ for(const z of fireZones){const x=sx(z.x),y=sy(z.y);ctx.globalAlpha=Math.min(1,z.life/.5)*.38;const glow=ctx.createRadialGradient(x,y,0,x,y,z.r);glow.addColorStop(0,'#ff7a1855');glow.addColorStop(.8,'#ff3b3055');glow.addColorStop(1,'#ff3b3000');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,z.r,0,Math.PI*2);ctx.fill();evfxRing(x,y,z.r,'#ff983e',2);
+  for(let i=0;i<10;i++){const a=i*2.399+evolutionVfxClock*.3,r=z.r*(.3+(i%4)*.15);evfxStar(x+Math.cos(a)*r,y+Math.sin(a)*r,4+Math.sin(evolutionVfxClock*8+i)*2,a,'#ffd166');}}
+ const aura=weapons.find(w=>w.type==='shockwave'&&w.branch==='alt');
+ if(aura){const r=(180+aura.level*20+30+Math.min(Math.max(player.range-520,0),500)*.35)*.6;ctx.globalAlpha=.28;evfxRing(sx(player.x),sy(player.y),r,'#67e8f9',2);ctx.save();ctx.translate(sx(player.x),sy(player.y));ctx.rotate(evolutionVfxClock*.4);ctx.strokeStyle='#a5f3fc';ctx.beginPath();for(let i=0;i<=6;i++){const a=i*Math.PI/3;if(!i)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.stroke();ctx.restore();}
+ for(const orb of orbitOrbs){ctx.globalAlpha=.85;const x=sx(orb.x),y=sy(orb.y);const glow=ctx.createRadialGradient(x,y,0,x,y,30);glow.addColorStop(0,'#ffffff');glow.addColorStop(.3,'#60a5fa');glow.addColorStop(1,'#60a5fa00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,30,0,Math.PI*2);ctx.fill();evfxRing(x,y,22,'#bfdbfe',2);evfxStar(x,y,28,evolutionVfxClock*4,'#dbeafe');}
+ for(const bh of blackholes){if(bh.collapse&&bh.life<.7){ctx.globalAlpha=.35+.25*Math.sin(evolutionVfxClock*22);evfxRing(sx(bh.x),sy(bh.y),bh.r,'#f0abfc',4);}}
+ ctx.restore();
+}
+
 </script>
 </body>
 </html>

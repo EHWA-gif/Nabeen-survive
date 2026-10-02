@@ -10,6 +10,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b12;fon
 body{display:flex;align-items:center;justify-content:center}
 #game{position:fixed;inset:0;width:100vw;height:100vh;overflow:hidden;background:#111827}
 canvas{display:block;width:100%;height:100%;background:#101827}
+#uiLayer{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:top left;pointer-events:none;z-index:1}
+#upgrade,#treasure,#evolutionNotice,#pauseMenu{pointer-events:auto}
 #hud{position:absolute;left:0;top:0;width:100%;padding:14px 18px;pointer-events:none;text-shadow:0 2px 3px #000}
 .row{display:flex;align-items:center;gap:14px}
 #levelText{font-weight:bold;min-width:70px}
@@ -49,7 +51,7 @@ button:hover{filter:brightness(1.1)}
 .evolution-panel{width:min(560px,90%);background:linear-gradient(180deg,#1d2740,#111827);border:2px solid #ffd54a;border-radius:18px;padding:30px;text-align:center;box-shadow:0 18px 60px #000b}
 .evolution-panel h1{margin:0 0 12px;font-size:36px}.evo-name{font-size:27px;font-weight:900;color:#ffe082;margin:12px 0}.evolution-panel p{color:#cbd6ea;line-height:1.6}.evolution-panel button{margin-top:18px}
 
-#bossHud{position:absolute;left:50%;top:72px;transform:translateX(-50%);width:min(560px,55vw);display:none;z-index:5;pointer-events:none;text-align:center;text-shadow:0 2px 3px #000}
+#bossHud{position:absolute;left:50%;top:72px;transform:translateX(-50%);width:min(560px,55%);display:none;z-index:5;pointer-events:none;text-align:center;text-shadow:0 2px 3px #000}
 #bossName{font-weight:900;font-size:18px;margin-bottom:5px;color:#ffb4c4}
 #bossBar{height:18px;background:#25121a;border:2px solid #7f3046;border-radius:12px;overflow:hidden;box-shadow:0 5px 20px #0008}
 #bossFill{height:100%;width:100%;background:linear-gradient(90deg,#ef476f,#ff7b9a);transition:width .08s}
@@ -74,7 +76,7 @@ button:hover{filter:brightness(1.1)}
 @media(max-width:700px){#audioControls{right:10px;top:185px;width:190px;padding:8px 10px}}
 #pauseButton{position:absolute;right:252px;top:12px;z-index:20;margin:0;padding:8px 12px;font-size:14px}
 #pauseMenu{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000b;z-index:30}
-#pauseMenu .panel{width:min(440px,92vw)}
+#pauseMenu .panel{width:min(440px,92%)}
 #pauseMenu .audio-row{display:flex;align-items:center;gap:10px;margin:12px 0;text-align:left}
 #pauseMenu label{width:52px;color:#c7d0df;font-size:14px}
 #pauseMenu input[type="range"]{flex:1;accent-color:#58d5ff}
@@ -86,6 +88,7 @@ button:hover{filter:brightness(1.1)}
 <body>
 <div id="game">
 <canvas id="canvas"></canvas>
+<div id="uiLayer">
 <div id="hud">
   <div class="row">
     <div id="levelText">Lv. 1</div>
@@ -158,6 +161,7 @@ button:hover{filter:brightness(1.1)}
 </div>
 <div id="message"></div>
 </div>
+</div>
 
 <script>
 "use strict";
@@ -170,6 +174,7 @@ bossImage.onerror=()=>{bossImageReady=false;};
 bossImage.src = "boss.png";
 const canvas=document.getElementById("canvas"), ctx=canvas.getContext("2d");
 const gameEl=document.getElementById("game");
+const uiLayer=document.getElementById("uiLayer");
 let W=1920,H=1080, running=false, paused=false, last=0, elapsed=0;
 let cameraX=0, cameraY=0;
 const keys={};
@@ -289,6 +294,11 @@ function resize(){
   canvas.width=Math.floor(r.width*d); canvas.height=Math.floor(r.height*d);
   // 게임 좌표(1920×1080)는 고정하고 화면 크기에 맞춰 캔버스 표시만 조정합니다.
   ctx.setTransform(canvas.width/1920,0,0,canvas.height/1080,0,0);
+  // FHD 기준 크기를 유지하고, 큰 창에서는 UI 전체를 동일한 비율로 확대합니다.
+  const uiScale=Math.max(1,Math.min(r.width/1920,r.height/1080));
+  uiLayer.style.width=`${r.width/uiScale}px`;
+  uiLayer.style.height=`${r.height/uiScale}px`;
+  uiLayer.style.transform=`scale(${uiScale})`;
 }
 addEventListener("resize",resize); resize();
 

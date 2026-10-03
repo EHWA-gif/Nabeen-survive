@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nabeen survivor 1.5</title>
+<title>Nabeen survivor 2.0</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b12;font-family:Arial,"Malgun Gothic",sans-serif;color:#fff}
@@ -97,6 +97,14 @@ button:hover{filter:brightness(1.1)}
 .start-stat-row small{display:block;color:#9fb5d5;margin-top:5px}.start-stat-controls{display:flex;align-items:center;gap:12px}
 .start-stat-controls button{margin:0;padding:7px 13px;font-size:20px}.start-stat-controls b{min-width:38px;text-align:center}
 #startStats button:disabled{opacity:.35;cursor:default}#startStatsPreview{line-height:1.8;font-size:14px}
+
+#centerMsg .combat-summary{width:min(880px,94%);max-height:94%;overflow:auto;padding:24px;background:rgba(8,12,22,.96)}
+.combat-summary h1{font-size:30px}.combat-record-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:18px;margin-top:18px;text-align:left}
+.combat-section{background:#131e31;border:1px solid #354660;border-radius:12px;padding:16px;min-width:0}.combat-section h2{font-size:18px;margin:0 0 12px;color:#89deff}
+.combat-table{width:100%;border-collapse:collapse;font-size:14px}.combat-table th,.combat-table td{padding:9px 5px;border-bottom:1px solid #30405a}.combat-table th{color:#9fb5d5;font-size:12px}.combat-table td:nth-child(n+2),.combat-table th:nth-child(n+2){text-align:right;white-space:nowrap}
+.combat-damage-bar{height:4px;background:#29364d;border-radius:3px;margin-top:5px}.combat-damage-bar span{display:block;height:100%;background:#58d5ff;border-radius:3px}
+.combat-list{list-style:none;padding:0;margin:0}.combat-list li{padding:7px 0;border-bottom:1px solid #30405a;font-size:14px;line-height:1.5}.combat-note{font-size:12px!important;color:#9fb5d5!important;line-height:1.6}.combat-section+.combat-section{margin-top:14px}
+@media(max-width:650px){.combat-record-grid{grid-template-columns:1fr}.combat-summary h1{font-size:26px}#centerMsg .combat-summary{padding:18px}.combat-table{font-size:12px}}
 </style>
 </head>
 <body>
@@ -150,7 +158,7 @@ button:hover{filter:brightness(1.1)}
 </div>
 <div id="centerMsg">
   <div class="panel">
-    <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v1.5</small></h1>
+    <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v2.0</small></h1>
     <p>WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
     <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 듀아악!</p>
     <button id="startBtn">게임 시작</button>
@@ -1018,7 +1026,30 @@ function hurtPlayer(d){
   if(player.hp<=0)gameOver();
 }
 
+function captureCombatRecord(){
+ const names={magic:'나쫀쿠',shotgun:'산탄총',fireball:'화염구',shockwave:'충격파',boomerang:'마법구',blackhole:'블랙홀',laser:'탈모빔'};
+ return {
+  totalDamage:Object.values(damageMeter).reduce((sum,d)=>sum+d,0),
+  weapons:weapons.filter(w=>w.level>0||damageMeter[w.type]>0).map(w=>({
+   type:w.type,name:names[w.type],level:w.level,damage:damageMeter[w.type]||0,
+   evolution:w.evolved?(w.branch==='alt'?ALT_EVOLUTION_INFO:EVOLUTION_INFO)[w.type].name.trim():null
+  })).sort((a,b)=>b.damage-a.damage),
+  allocation:{...startAllocation},bonuses:{...startBonuses}
+ };
+}
+function renderCombatRecord(record){
+ const number=n=>n.toLocaleString('ko-KR',{maximumFractionDigits:1});
+ const rows=record.weapons.map(w=>{
+  const share=record.totalDamage>0?w.damage/record.totalDamage*100:0;
+  return `<tr><td>${w.name}<small style="color:#9fb5d5"> ${w.level>0?'Lv.'+w.level:'(필살기)'}</small><div class="combat-damage-bar"><span style="width:${share}%"></span></div></td><td>${number(w.damage)}</td><td>${share.toFixed(1)}%</td></tr>`;
+ }).join('');
+ const evolved=record.weapons.filter(w=>w.evolution);
+ const statRows=START_STAT_OPTIONS.map(o=>`<li>${o.name} <b>${record.allocation[o.key]}포인트</b> <span style="color:#9fb5d5">(+${Math.round(record.allocation[o.key]*o.rate*100)}%)</span></li>`).join('');
+ return `<div class="combat-record-grid"><section class="combat-section"><h2>📊 무기별 누적 피해</h2><p>총 피해 <b>${number(record.totalDamage)}</b></p><table class="combat-table"><thead><tr><th scope="col">무기</th><th scope="col">피해량</th><th scope="col">비중</th></tr></thead><tbody>${rows||'<tr><td colspan="3">기록된 피해가 없습니다.</td></tr>'}</tbody></table><p class="combat-note">적의 실제 체력 감소량 기준입니다.<br>기존 딜 미터기와 동일하게 필살기 피해는 충격파에 포함됩니다.</p></section><div><section class="combat-section"><h2>✨ 선택한 진화</h2><ul class="combat-list">${evolved.length?evolved.map(w=>`<li>${w.evolution} <span style="color:#9fb5d5">Lv.${w.level}</span></li>`).join(''):'<li>진화한 무기 없음</li>'}</ul></section><section class="combat-section"><h2>⚔️ 시작 스탯 배분</h2><ul class="combat-list">${statRows}</ul><p class="combat-note">이번 판 시작 시 배분한 기록입니다.<br>다시 시작하면 5포인트를 새로 배분합니다.</p></section></div></div>`;
+}
 function gameOver(){
+  // 게임오버 초기화 전에 이번 판 기록을 복사한다.
+  const combatRecord=captureCombatRecord();
   damageNumbers=[];
   running=false;
   resetStartBonuses();
@@ -1034,13 +1065,14 @@ function gameOver(){
 
   document.getElementById("centerMsg").style.display="flex";
   document.getElementById("centerMsg").innerHTML=
-    `<div class="panel">
+    `<div class="panel combat-summary">
       <h1>💀 게임 오버</h1>
       <p>생존 시간 <b>${formatTime(elapsed)}</b></p>
       <p>처치 <b>${kills}</b> · 레벨 <b>${level}</b></p>
       <p style="font-size:24px;margin-top:18px;">🏆 점수 <b>${finalScore.toLocaleString()}</b></p>
       <p style="color:#8fa3c7;font-size:13px;">생존 ${survivalSeconds}초 × 10 + 처치 ${kills} × 20</p>
-      <button onclick="startGame()">다시 시작</button>
+      ${renderCombatRecord(combatRecord)}
+      <button onclick="startGame()">다시 시작 · 스탯 배분</button>
     </div>`;
 }
 

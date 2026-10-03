@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Nabeen survivor 2.0</title>
 <style>
 *{box-sizing:border-box}
@@ -105,12 +105,74 @@ button:hover{filter:brightness(1.1)}
 .combat-damage-bar{height:4px;background:#29364d;border-radius:3px;margin-top:5px}.combat-damage-bar span{display:block;height:100%;background:#58d5ff;border-radius:3px}
 .combat-list{list-style:none;padding:0;margin:0}.combat-list li{padding:7px 0;border-bottom:1px solid #30405a;font-size:14px;line-height:1.5}.combat-note{font-size:12px!important;color:#9fb5d5!important;line-height:1.6}.combat-section+.combat-section{margin-top:14px}
 @media(max-width:650px){.combat-record-grid{grid-template-columns:1fr}.combat-summary h1{font-size:26px}#centerMsg .combat-summary{padding:18px}.combat-table{font-size:12px}}
+/* 모바일: 실제 표시 영역과 노치 안전 영역에 맞춘 조작/레이아웃 */
+html,body{overscroll-behavior:none}
+#game{height:100dvh}
+#mobileControls{display:none;position:absolute;inset:0;pointer-events:none;z-index:8}
+#mobileControls[hidden]{display:none!important}
+#joystick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));width:clamp(100px,25vh,144px);height:clamp(100px,25vh,144px);border-radius:50%;border:2px solid #8bdefa77;background:#09203b66;box-shadow:inset 0 0 25px #58d5ff22;touch-action:none;pointer-events:auto;user-select:none;-webkit-user-select:none}
+#joystick::before{content:'이동';position:absolute;top:9px;width:100%;text-align:center;font-size:11px;color:#bdeaff99}
+#joystickKnob{position:absolute;left:50%;top:50%;width:42%;height:42%;margin-left:-21%;margin-top:-21%;border-radius:50%;background:#74ddffc9;border:2px solid #d5f6ff;box-shadow:0 2px 12px #0007;pointer-events:none}
+#mobileUltimate{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));width:76px;height:76px;padding:8px;margin:0;border:2px solid #ffd54a;border-radius:50%;background:#352b0de6;color:#ffe082;font-size:15px;touch-action:none;pointer-events:auto}
+#mobileUltimate small{display:block;font-size:10px;margin-top:4px}#mobileUltimate:disabled{opacity:.4;filter:grayscale(1)}
+#mobileMeterToggle{display:none}
+#rotateGuide{position:absolute;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#090f1bf5;text-align:center;padding:24px;pointer-events:auto;touch-action:none}
+#rotateGuide[hidden]{display:none}#rotateGuide strong{display:block;font-size:25px;color:#7fe4ff;margin-bottom:18px}#rotateGuide p{font-size:16px;line-height:1.8;color:#d5e2f4}
+body.mobile #mobileControls{display:block}body.mobile canvas{touch-action:none}
+body.mobile #uiLayer{user-select:none;-webkit-user-select:none}
+body.mobile #hud{left:max(8px,env(safe-area-inset-left));top:max(6px,env(safe-area-inset-top));width:40%;padding:0}
+body.mobile #hud .row{gap:6px}body.mobile #levelText{min-width:42px;font-size:13px}
+body.mobile #xpBar{width:43%;height:12px}body.mobile #hpBar{width:32%;height:12px}
+body.mobile #stats{font-size:11px;line-height:1.5;margin-top:3px;white-space:nowrap}
+body.mobile #scoreHud{left:50%;top:max(6px,env(safe-area-inset-top));transform:translateX(-50%);width:132px;padding:3px 8px}
+body.mobile #scoreHud .score-title{font-size:11px;line-height:14px}body.mobile #scoreValue{font-size:23px;line-height:26px}
+body.mobile #pauseButton{top:max(6px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));min-width:74px;min-height:44px;padding:7px 10px;font-size:13px}
+body.mobile #damageMeter{right:max(8px,env(safe-area-inset-right));top:104px;width:166px;padding:7px 9px;font-size:11px;line-height:1.4;max-height:calc(100% - 210px);overflow:auto;pointer-events:auto;touch-action:pan-y;z-index:7}
+body.mobile #damageMeter h3{display:none}body.mobile #damageMeter .dm-total{border-top:0;margin:0;padding:0}
+body.mobile:not(.meter-open) #damageMeter .dm-row:not(.dm-total):not(.dm-dps){display:none}
+body.mobile #mobileMeterToggle{display:block;position:absolute;right:max(8px,env(safe-area-inset-right));top:55px;z-index:8;margin:0;padding:7px 10px;min-height:44px;min-width:74px;font-size:12px;background:#152940;color:#bdeeff;border:1px solid #476784}
+body.mobile #randomEventHud{top:61px;min-width:150px;max-width:37%;padding:5px 10px;border-radius:8px}
+body.mobile #randomEventHud .event-title{font-size:13px}body.mobile #randomEventHud .event-time{font-size:11px;margin-top:0}
+body.mobile #bossHud{top:115px;width:38%}body.mobile #bossName{font-size:13px;margin-bottom:2px}body.mobile #bossBar{height:12px}
+body.mobile #ultimateHud,body.mobile #audioControls{display:none!important}
+body.mobile #message{bottom:10px;max-width:52%;font-size:12px;text-align:center}
+body.mobile #centerMsg,body.mobile #upgrade,body.mobile #treasure,body.mobile #pauseMenu,body.mobile #startStats,body.mobile #evolutionNotice{padding:max(7px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(7px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+body.mobile .panel,body.mobile #treasure .panel,body.mobile #pauseMenu .panel,body.mobile #startStats .panel,body.mobile #centerMsg .combat-summary,body.mobile #evolutionNotice .evolution-panel{max-height:100%;max-width:100%;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:14px 18px;border-radius:12px}
+body.mobile .panel h1,body.mobile .evolution-panel h1,body.mobile #startStats h1{font-size:22px;margin:0 0 7px}
+body.mobile .panel p,body.mobile .evolution-panel p{font-size:13px;line-height:1.5;margin:5px 0}
+body.mobile button{min-height:44px;font-size:14px;padding:9px 14px;margin-top:8px;touch-action:manipulation}
+body.mobile input[type=range]{min-width:0;min-height:36px;touch-action:none}body.mobile select{min-height:40px;font-size:14px}
+body.mobile #pauseMenu .panel{width:min(680px,96%)}body.mobile #pauseMenu .audio-row{margin:5px 0}body.mobile #pauseMenu #evolutionBuilds{margin-top:6px!important}
+body.mobile #startStats .panel{width:min(760px,98%)}body.mobile #startStatRows{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+body.mobile #statPointsLeft{font-size:18px}body.mobile .start-stat-row{padding:5px 0;gap:5px}
+body.mobile .start-stat-row b{font-size:14px}body.mobile .start-stat-row small{font-size:11px;margin-top:3px}
+body.mobile .start-stat-controls{gap:5px}body.mobile .start-stat-controls button{min-width:44px;padding:5px;margin:0;font-size:20px}
+body.mobile .start-stat-controls b{min-width:32px;font-size:12px}body.mobile #startStatsPreview{font-size:12px}
+body.mobile #upgrade .panel{width:min(900px,98%)}body.mobile .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:none}
+body.mobile .card{width:auto;min-height:120px;padding:13px;transform:none}body.mobile .card h3{font-size:17px}body.mobile .card p{font-size:13px}
+body.mobile #treasureCards{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+body.mobile .treasure-card{min-height:110px;padding:13px 10px;transform:none}body.mobile .treasure-card h3{font-size:17px;margin-bottom:8px}
+body.mobile #evolutionCards{grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+body.mobile .evo-name{font-size:18px;margin:6px 0}body.mobile .evolution-choice{padding:12px;margin:0}
+body.mobile .evolution-choice strong{font-size:18px;margin-bottom:6px}body.mobile .evolution-choice span{font-size:13px;line-height:1.4}body.mobile .evolution-choice small{font-size:11px;margin-top:6px}
+body.mobile .combat-record-grid{grid-template-columns:1.35fr 1fr;gap:10px;margin-top:10px}body.mobile .combat-section{padding:10px}body.mobile .combat-section h2{font-size:16px}body.mobile .combat-table{font-size:12px}
+@media(max-width:620px){body.mobile #startStatRows{grid-template-columns:1fr}body.mobile .cards,body.mobile #treasureCards{grid-template-columns:1fr}body.mobile .card,body.mobile .treasure-card{min-height:64px}body.mobile .combat-record-grid{grid-template-columns:1fr}body.mobile #scoreHud{width:115px}body.mobile #hud{width:37%}body.mobile #stats{font-size:10px}}
+#mobileMeterToggle[hidden]{display:none!important}
+body.mobile #upgrade{z-index:25}
+body.mobile #centerMsg{z-index:26}
+
 </style>
 </head>
 <body>
 <div id="game">
 <canvas id="canvas"></canvas>
+<div id="rotateGuide" hidden role="status"><div><strong>휴대폰을 가로로 돌려주세요</strong><p>왼쪽 조이스틱으로 이동하고<br>오른쪽 필살기 버튼으로 공격하세요.</p><p>세로 화면에서는 게임 진행이 멈춥니다.</p></div></div>
 <div id="uiLayer">
+<div id="mobileControls" hidden>
+ <div id="joystick" aria-label="이동 조이스틱"><div id="joystickKnob"></div></div>
+ <button id="mobileUltimate" type="button" aria-label="필살기 사용">필살기<small>아아앜 · 1회</small></button>
+</div>
+<button id="mobileMeterToggle" type="button" hidden aria-controls="damageMeter" aria-expanded="false">피해량 펼치기</button>
 <div id="hud">
   <div class="row">
     <div id="levelText">Lv. 1</div>
@@ -159,7 +221,7 @@ button:hover{filter:brightness(1.1)}
 <div id="centerMsg">
   <div class="panel">
     <h1>⚔️ 나빈 서바이벌 <small style="font-size:14px;color:#8fa3c7">v2.0</small></h1>
-    <p>WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
+    <p id="movementHelp">WASD 또는 방향키로 이동하세요.</p><p style="color:#8fa3c7">캐릭터가 직접 움직이고, 화면은 가장자리에서 따라옵니다.<br>레벨업할 때 새로운 무기를 획득하거나 강화할 수 있습니다.</p>
     <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 듀아악!</p>
     <button id="startBtn">게임 시작</button>
   </div>
@@ -241,11 +303,11 @@ let bgmVolume=.60, bgmPlayPending=false, bgmUnavailable=false;
 const backgroundMusic=document.getElementById("backgroundMusic");
 backgroundMusic.addEventListener("error",()=>{bgmUnavailable=true;});
 function syncBgmPlayback(){
-  if(!running||paused){backgroundMusic.pause();return;}
+  if(!running||paused||mobilePortrait){backgroundMusic.pause();return;}
   if(bgmUnavailable||bgmPlayPending||!backgroundMusic.paused)return;
   bgmPlayPending=true;
   backgroundMusic.play().then(()=>{
-    if(!running||paused)backgroundMusic.pause();
+    if(!running||paused||mobilePortrait)backgroundMusic.pause();
   }).catch(error=>{
     // 없는 파일이나 자동재생 제한은 게임과 효과음에 영향을 주지 않는다.
     bgmUnavailable=true;
@@ -355,6 +417,71 @@ function initAudioControls(){
 initAudioControls();
 updateAudioGains();
 
+// 조작 입력과 회전 상태는 전투 수치 및 메뉴 일시정지 상태와 분리한다.
+let mobileMode=false,mobilePortrait=false;
+const joystickState={pointerId:null,x:0,y:0};
+function resetJoystick(){
+ joystickState.pointerId=null;joystickState.x=0;joystickState.y=0;
+ const knob=document.getElementById('joystickKnob');if(knob)knob.style.transform='translate(0px,0px)';
+}
+function syncMobileControls(){
+ const active=mobileMode&&running&&!paused&&!mobilePortrait&&!document.hidden;
+ document.getElementById('mobileControls').hidden=!active;
+ if(!active)resetJoystick();
+ const ult=document.getElementById('mobileUltimate');ult.disabled=!active||ultimateUsed;
+ const label=ultimateUsed?'사용 완료<small>다음 판에 충전</small>':'필살기<small>아아앜 · 1회</small>';
+ if(ult.innerHTML!==label)ult.innerHTML=label;
+ document.getElementById('mobileMeterToggle').hidden=!running||paused||mobilePortrait;
+}
+function refreshMobileLayout(){
+ mobileMode=matchMedia('(pointer: coarse)').matches||navigator.maxTouchPoints>0;
+ const bounds=gameEl.getBoundingClientRect();
+ mobilePortrait=mobileMode&&bounds.height>bounds.width;
+ document.body.classList.toggle('mobile',mobileMode);
+ const help=document.getElementById('movementHelp');if(help)help.textContent=mobileMode?'왼쪽 조이스틱으로 이동하고 오른쪽 버튼으로 필살기를 사용하세요.':'WASD 또는 방향키로 이동하세요.';
+ document.getElementById('rotateGuide').hidden=!mobilePortrait;
+ resetJoystick();
+ for(const key of Object.keys(keys))keys[key]=false;
+ last=performance.now();syncMobileControls();
+}
+function initMobileControls(){
+ const stick=document.getElementById('joystick');
+ function move(e){
+  if(e.pointerId!==joystickState.pointerId)return;
+  if(!running||paused||mobilePortrait){resetJoystick();return;}
+  e.preventDefault();
+  const r=stick.getBoundingClientRect(),radius=r.width*.32;
+  const dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+  const distance=Math.hypot(dx,dy),ratio=distance>radius?radius/distance:1;
+  document.getElementById('joystickKnob').style.transform=`translate(${dx*ratio}px,${dy*ratio}px)`;
+  if(distance<radius*.12){joystickState.x=0;joystickState.y=0;return;}
+  // 원래 키보드 이동과 같은 최대 속도로 방향만 전달한다.
+  joystickState.x=dx/distance;joystickState.y=dy/distance;
+ }
+ stick.addEventListener('pointerdown',e=>{
+  if(!running||paused||mobilePortrait||joystickState.pointerId!==null)return;
+  e.preventDefault();joystickState.pointerId=e.pointerId;
+  stick.setPointerCapture(e.pointerId);move(e);
+ });
+ stick.addEventListener('pointermove',move);
+ function release(e){if(e.pointerId===joystickState.pointerId)resetJoystick();}
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,release);
+ document.getElementById('mobileUltimate').addEventListener('pointerdown',e=>{
+  e.preventDefault();if(!running||paused||mobilePortrait)return;useUltimate();syncMobileControls();
+ });
+ document.getElementById('mobileMeterToggle').addEventListener('click',()=>{
+  const expanded=document.body.classList.toggle('meter-open');
+  document.getElementById('mobileMeterToggle').textContent=expanded?'피해량 접기':'피해량 펼치기';
+  document.getElementById('mobileMeterToggle').setAttribute('aria-expanded',String(expanded));
+ });
+ function suspend(){resetJoystick();for(const key of Object.keys(keys))keys[key]=false;if(running&&!paused)togglePause();syncMobileControls();}
+ addEventListener('blur',suspend);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)suspend();});
+ window.visualViewport?.addEventListener('resize',resize);
+ matchMedia('(pointer: coarse)').addEventListener('change',resize);
+ refreshMobileLayout();
+}
+
 function resize(){
   const r=gameEl.getBoundingClientRect();
   const d=Math.min(devicePixelRatio||1,2);
@@ -362,10 +489,11 @@ function resize(){
   // 게임 좌표(1920×1080)는 고정하고 화면 크기에 맞춰 캔버스 표시만 조정합니다.
   ctx.setTransform(canvas.width/1920,0,0,canvas.height/1080,0,0);
   // FHD 기준 크기를 유지하고, 큰 창에서는 UI 전체를 동일한 비율로 확대합니다.
-  const uiScale=Math.max(1,Math.min(r.width/1920,r.height/1080));
+  const uiScale=(matchMedia("(pointer: coarse)").matches||navigator.maxTouchPoints>0)?Math.max(1,Math.min(r.width/1200,r.height/700,1.6)):Math.max(1,Math.min(r.width/1920,r.height/1080));
   uiLayer.style.width=`${r.width/uiScale}px`;
   uiLayer.style.height=`${r.height/uiScale}px`;
   uiLayer.style.transform=`scale(${uiScale})`;
+  refreshMobileLayout();
 }
 addEventListener("resize",resize); resize();
 
@@ -377,7 +505,7 @@ addEventListener("keydown",e=>{
     else togglePause();
     return;
   }
-  if(startStatsOpen)return;
+  if(startStatsOpen||mobilePortrait)return;
   keys[key]=true;
   if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key)) e.preventDefault();
   if((e.key.toLowerCase()==="r")&&!running) startGame();
@@ -389,6 +517,7 @@ addEventListener("keydown",e=>{
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
 function togglePause(){
+  resetJoystick();
   if(!running)return;
   const menu=document.getElementById("pauseMenu");
   if(menu.style.display==="flex")return resumeGame();
@@ -400,6 +529,7 @@ function togglePause(){
   last=performance.now();
 }
 function resumeGame(){
+  resetJoystick();
   if(!running)return;
   document.getElementById("pauseMenu").style.display="none";
   paused=false;
@@ -451,6 +581,7 @@ function resetStartBonuses(){
 }
 function weaponDamage(amount){return amount*startBonuses.damage;}
 function beginGame(){
+  resetJoystick();
   damageNumbers=[];damageNumberSerial=0;
   evfxReset();branchReset();
   running=true; paused=false; elapsed=0;kills=0;level=1;xp=0;xpNeed=8;weaponLevel=1;
@@ -1048,6 +1179,7 @@ function renderCombatRecord(record){
  return `<div class="combat-record-grid"><section class="combat-section"><h2>📊 무기별 누적 피해</h2><p>총 피해 <b>${number(record.totalDamage)}</b></p><table class="combat-table"><thead><tr><th scope="col">무기</th><th scope="col">피해량</th><th scope="col">비중</th></tr></thead><tbody>${rows||'<tr><td colspan="3">기록된 피해가 없습니다.</td></tr>'}</tbody></table><p class="combat-note">적의 실제 체력 감소량 기준입니다.<br>기존 딜 미터기와 동일하게 필살기 피해는 충격파에 포함됩니다.</p></section><div><section class="combat-section"><h2>✨ 선택한 진화</h2><ul class="combat-list">${evolved.length?evolved.map(w=>`<li>${w.evolution} <span style="color:#9fb5d5">Lv.${w.level}</span></li>`).join(''):'<li>진화한 무기 없음</li>'}</ul></section><section class="combat-section"><h2>⚔️ 시작 스탯 배분</h2><ul class="combat-list">${statRows}</ul><p class="combat-note">이번 판 시작 시 배분한 기록입니다.<br>다시 시작하면 5포인트를 새로 배분합니다.</p></section></div></div>`;
 }
 function gameOver(){
+  resetJoystick();document.getElementById("mobileControls").hidden=true;
   // 게임오버 초기화 전에 이번 판 기록을 복사한다.
   const combatRecord=captureCombatRecord();
   damageNumbers=[];
@@ -1321,6 +1453,7 @@ function update(dt){
   // 플레이어는 실제 월드 좌표에서 이동한다.
   let dx=(keys["d"]||keys["arrowright"]?1:0)-(keys["a"]||keys["arrowleft"]?1:0);
   let dy=(keys["s"]||keys["arrowdown"]?1:0)-(keys["w"]||keys["arrowup"]?1:0);
+  if(!dx&&!dy&&mobileMode){dx=joystickState.x;dy=joystickState.y;}
   if(dx||dy){
     const l=Math.hypot(dx,dy);
     dx/=l; dy/=l;
@@ -2023,7 +2156,8 @@ function draw(){
 function loop(now){
   if(!running)return;
   const dt=Math.min(.033,(now-last)/1000);last=now;
-  if(!paused)update(dt);
+  syncMobileControls();
+  if(!paused&&!mobilePortrait&&!document.hidden)update(dt);
   syncBgmPlayback();
   draw();
   requestAnimationFrame(loop);
@@ -2249,6 +2383,7 @@ function drawBranchEffects(sx,sy){
  ctx.restore();
 }
 
+initMobileControls();
 </script>
 </body>
 </html>

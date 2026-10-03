@@ -89,6 +89,14 @@ button:hover{filter:brightness(1.1)}
 .evolution-choice{margin:0;padding:22px;text-align:left;background:#14233b;border:2px solid #587493;border-radius:14px;white-space:normal;cursor:pointer}
 .evolution-choice:hover{border-color:#67e8f9;background:#1c3353}.evolution-choice strong{display:block;font-size:23px;color:#fff3a3;margin-bottom:12px}.evolution-choice span{display:block;font-size:15px;line-height:1.6;color:#d1e4fa}.evolution-choice small{display:block;font-size:12px;color:#8eb9d9;margin-top:15px}
 @media(max-width:700px){#evolutionCards{grid-template-columns:1fr}.evolution-choice{padding:14px}.evolution-choice strong{font-size:19px}}
+
+#startStats{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#090b12e8;z-index:60;pointer-events:auto}
+#startStats .panel{width:min(580px,94%);max-height:94%;overflow:auto;padding:24px}
+#startStats h1{font-size:28px}#statPointsLeft{color:#ffe082;font-size:22px;font-weight:bold}
+.start-stat-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #33435c;text-align:left}
+.start-stat-row small{display:block;color:#9fb5d5;margin-top:5px}.start-stat-controls{display:flex;align-items:center;gap:12px}
+.start-stat-controls button{margin:0;padding:7px 13px;font-size:20px}.start-stat-controls b{min-width:38px;text-align:center}
+#startStats button:disabled{opacity:.35;cursor:default}#startStatsPreview{line-height:1.8;font-size:14px}
 </style>
 </head>
 <body>
@@ -134,7 +142,8 @@ button:hover{filter:brightness(1.1)}
     <div class="audio-row"><label for="pauseMasterVolume">전체</label><input id="pauseMasterVolume" type="range" min="0" max="100" value="70"><span id="pauseAudioValue" class="audio-value">70%</span></div>
     <div class="audio-row"><label for="pauseSfxVolume">효과음</label><input id="pauseSfxVolume" type="range" min="0" max="100" value="80"></div>
     <div class="audio-row"><label for="pauseBgmVolume">BGM</label><input id="pauseBgmVolume" type="range" min="0" max="100" value="60"><span id="pauseBgmValue" class="audio-value">60%</span></div>
-    <div class="audio-row"><label for="evolutionVfxQuality" style="width:90px">진화 이펙트</label><select id="evolutionVfxQuality" style="flex:1;background:#172033;color:#fff;padding:7px;border:1px solid #526788;border-radius:6px"><option value="rich">풍부하게</option><option value="light">절제해서</option></select></div>
+    <div class="audio-row"><label for="evolutionVfxQuality" style="width:90px">진화 이펙트</label><select id="evolutionVfxQuality" style="flex:1;background:#172033;color:#fff;padding:7px;border:1px solid #526788;border-radius:6px"><option value="rich">최대</option><option value="light">최소</option></select></div>
+    <div class="audio-row"><label for="damageNumbersEnabled" style="width:110px">피해 숫자 표시</label><select id="damageNumbersEnabled" style="flex:1;background:#172033;color:#fff;padding:7px;border:1px solid #526788;border-radius:6px"><option value="on">켜기</option><option value="off">끄기</option></select></div>
     <button id="pauseMute" type="button">🔊 음소거</button><br>
     <div id="evolutionBuilds" style="white-space:pre-line;font-size:13px;line-height:1.7;color:#a5d8f3;margin-top:12px">선택한 진화: 없음</div><button id="resumeButton" type="button">계속하기</button>
   </div>
@@ -146,6 +155,15 @@ button:hover{filter:brightness(1.1)}
     <p>공격은 자동으로 이루어집니다.</p><p style="color:#ff8fa3">⚠️ 듀아악!</p>
     <button id="startBtn">게임 시작</button>
   </div>
+</div>
+<div id="startStats" role="dialog" aria-modal="true" aria-labelledby="startStatsTitle">
+ <div class="panel"><h1 id="startStatsTitle">⚔️ 시작 스탯 배분</h1>
+ <p>매 판 5포인트 · 스탯당 최대 3포인트</p><p id="statPointsLeft"></p>
+ <div id="startStatRows"></div><p id="startStatsPreview"></p>
+ <p style="font-size:12px">게임오버 시 배분과 보너스가 초기화됩니다.</p>
+ <button type="button" onclick="resetStartAllocation();renderStartStats()">배분 초기화</button>
+ <button id="confirmStartStats" type="button" onclick="confirmStartStats()">이 스탯으로 시작</button>
+ </div>
 </div>
 <div id="upgrade">
   <div class="panel">
@@ -351,6 +369,7 @@ addEventListener("keydown",e=>{
     else togglePause();
     return;
   }
+  if(startStatsOpen)return;
   keys[key]=true;
   if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key)) e.preventDefault();
   if((e.key.toLowerCase()==="r")&&!running) startGame();
@@ -380,7 +399,51 @@ function resumeGame(){
   last=performance.now();
 }
 
+// 시작 보너스는 이번 판에서만 유지되며 기본 스탯과 분리한다.
+const START_STAT_POINTS=5, START_STAT_CAP=3;
+const START_STAT_OPTIONS=[
+ {key:'attack',name:'🔥 공격력',rate:.04,desc:'포인트당 모든 무기 피해 +4%'},
+ {key:'speed',name:'💨 이동속도',rate:.03,desc:'포인트당 시작 이동속도 +3%'},
+ {key:'health',name:'❤️ 최대 체력',rate:.08,desc:'포인트당 시작 최대 체력 +8%'},
+ {key:'experience',name:'✨ 경험치 획득량',rate:.04,desc:'포인트당 경험치 획득 +4%'}
+];
+let startAllocation={attack:0,speed:0,health:0,experience:0};
+let startBonuses={damage:1,xp:1,speed:0,health:0};
+let startStatsOpen=false;
+function resetStartAllocation(){startAllocation={attack:0,speed:0,health:0,experience:0};}
+function startPointsLeft(){return START_STAT_POINTS-Object.values(startAllocation).reduce((a,b)=>a+b,0);}
+function changeStartStat(key,delta){
+ if(!startStatsOpen||!Object.hasOwn(startAllocation,key)||![1,-1].includes(delta))return;
+ const n=startAllocation[key]+delta;
+ if(n<0||n>START_STAT_CAP||(delta>0&&startPointsLeft()<=0))return;
+ startAllocation[key]=n;renderStartStats();
+}
+function renderStartStats(){
+ document.getElementById('statPointsLeft').textContent=`남은 포인트: ${startPointsLeft()} / ${START_STAT_POINTS}`;
+ document.getElementById('startStatRows').innerHTML=START_STAT_OPTIONS.map(o=>`<div class="start-stat-row"><div><b>${o.name}</b><small>${o.desc}</small></div><div class="start-stat-controls"><button type="button" aria-label="${o.name} 감소" onclick="changeStartStat('${o.key}',-1)" ${startAllocation[o.key]===0?'disabled':''}>−</button><b>${startAllocation[o.key]} / 3</b><button type="button" aria-label="${o.name} 증가" onclick="changeStartStat('${o.key}',1)" ${startAllocation[o.key]>=START_STAT_CAP||startPointsLeft()<=0?'disabled':''}>+</button></div></div>`).join('');
+ document.getElementById('startStatsPreview').textContent=`무기 피해 +${startAllocation.attack*4}% · 이동속도 ${(205*(1+startAllocation.speed*.03)).toFixed(2)} · 최대 체력 ${(40*(1+startAllocation.health*.08)).toFixed(2)} · 경험치 +${startAllocation.experience*4}%`;
+ document.getElementById('confirmStartStats').disabled=startPointsLeft()!==0;
+}
 function startGame(){
+ if(running||startStatsOpen)return;
+ resetStartAllocation();startStatsOpen=true;
+ for(const key of Object.keys(keys))keys[key]=false;
+ document.getElementById('centerMsg').style.display='none';
+ document.getElementById('startStats').style.display='flex';renderStartStats();
+}
+function confirmStartStats(){
+ if(!startStatsOpen||startPointsLeft()!==0)return;
+ startBonuses={damage:1+startAllocation.attack*.04,xp:1+startAllocation.experience*.04,speed:205*startAllocation.speed*.03,health:40*startAllocation.health*.08};
+ startStatsOpen=false;document.getElementById('startStats').style.display='none';
+ beginGame();
+}
+function resetStartBonuses(){
+ if(player){player.speed-=startBonuses.speed;player.maxHp-=startBonuses.health;}
+ startBonuses={damage:1,xp:1,speed:0,health:0};resetStartAllocation();
+}
+function weaponDamage(amount){return amount*startBonuses.damage;}
+function beginGame(){
+  damageNumbers=[];damageNumberSerial=0;
   evfxReset();branchReset();
   running=true; paused=false; elapsed=0;kills=0;level=1;xp=0;xpNeed=8;weaponLevel=1;
   document.getElementById("audioControls").style.display="none";
@@ -409,6 +472,7 @@ function startGame(){
     x:0,y:0,r:18,speed:205,maxHp:40,hp:40,
     damage:14,damageBonus:0,fireRate:.12,bulletSpeed:500,range:520,multi:1,treasureMulti:0,attackSpeed:1
   };
+  player.speed+=startBonuses.speed;player.maxHp+=startBonuses.health;player.hp=player.maxHp;
   cameraX=player.x-W/2;
   cameraY=player.y-H/2;
   document.getElementById("centerMsg").style.display="none";
@@ -456,7 +520,7 @@ function useUltimate(){
         dealt=Math.min(e.hp,normalDamage);
       }
       e.hp-=dealt;
-      recordDamage("shockwave",dealt);
+      recordDamage("shockwave",dealt,e.x,e.y);
       if(e.boss)e.hitFlash=.22;
       if(e.hp<=0)defeatEnemy(e);
     }
@@ -479,10 +543,37 @@ function useUltimate(){
   showMessage("💥 필살기 발동! 주변의 적을 쓸어버립니다!");
 }
 
-function recordDamage(type, amount){
+// 표시 전용 효과: 피해 계산·난수·게임 진행에는 영향을 주지 않는다.
+let damageNumbers=[],damageNumberSerial=0,damageNumbersEnabled=true;
+try{damageNumbersEnabled=localStorage.getItem('nabeen.damageNumbers')!=='off';}catch{}
+const damageNumberOption=document.getElementById('damageNumbersEnabled');
+damageNumberOption.value=damageNumbersEnabled?'on':'off';
+damageNumberOption.onchange=()=>{
+ damageNumbersEnabled=damageNumberOption.value==='on';
+ if(!damageNumbersEnabled)damageNumbers=[];
+ try{localStorage.setItem('nabeen.damageNumbers',damageNumbersEnabled?'on':'off');}catch{}
+};
+function addDamageNumber(amount,x,y){
+ if(!damageNumbersEnabled||!Number.isFinite(amount)||amount<=0||!Number.isFinite(x)||!Number.isFinite(y))return;
+ const offset=((damageNumberSerial++%5)-2)*9;
+ damageNumbers.push({x:x+offset,y:y-20,amount,life:.75,maxLife:.75});
+ if(damageNumbers.length>200)damageNumbers.splice(0,damageNumbers.length-200);
+}
+function updateDamageNumbers(dt){
+ for(let i=damageNumbers.length-1;i>=0;i--){const n=damageNumbers[i];n.life-=dt;n.y-=35*dt;if(n.life<=0)damageNumbers.splice(i,1);}
+}
+function drawDamageNumbers(sx,sy){
+ if(!damageNumbersEnabled||!damageNumbers.length)return;
+ ctx.save();ctx.font='bold 22px Arial, "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=4;ctx.strokeStyle='#101020';ctx.fillStyle='#ffe082';
+ for(const n of damageNumbers){const x=sx(n.x),y=sy(n.y);if(x< -50||x>W+50||y< -50||y>H+50)continue;
+ ctx.globalAlpha=Math.min(1,n.life/.22);const text=n.amount<.1?'<0.1':n.amount.toLocaleString('ko-KR',{maximumFractionDigits:1});ctx.strokeText(text,x,y);ctx.fillText(text,x,y);}
+ ctx.restore();
+}
+function recordDamage(type, amount, x, y){
   if(!amount || amount<=0)return;
   if(!(type in damageMeter))return;
   damageMeter[type]+=amount;
+  addDamageNumber(amount,x,y);
 }
 function updateDamageMeter(){
   const names=["magic","shotgun","fireball","shockwave","boomerang","blackhole","laser"];
@@ -679,7 +770,7 @@ function shootWeaponBase(w){
     noise(.08,.08,0,700);
     const base=Math.atan2(targets[0].y-player.y,targets[0].x-player.x);
     const n=4+lv+(w.evolved?2:0)+player.treasureMulti;
-    const damage=(95+lv*25+player.damageBonus)*(w.evolved?1.25:1);
+    const damage=(95+lv*25+player.damageBonus)*(w.evolved?1.3:1);
     for(let i=0;i<n;i++) addBullet(base+(i-(n-1)/2)*.18,damage,700,9,1.6,"shotgun",0,w.evolved);
     w.cooldown=Math.max(.65,1.68-lv*.08)/player.attackSpeed;
   }else if(w.type==="fireball"){
@@ -708,9 +799,9 @@ function shootWeaponBase(w){
       const along=dx*dirX+dy*dirY;
       const across=Math.abs(dx*dirY-dy*dirX);
       if(along>=0 && along<=length && across<=width/2+e.r){
-        const dealt=Math.min(e.hp,damage);
+        const dealt=Math.min(e.hp,weaponDamage(damage));
         e.hp-=dealt;
-        recordDamage("laser",dealt);
+        recordDamage("laser",dealt,e.x,e.y);
         if(e.boss)e.hitFlash=.18;
         if(e.hp<=0)defeatEnemy(e);
       }
@@ -734,10 +825,10 @@ function shootWeaponBase(w){
     const d=Math.hypot(dx,dy);
 
     if(d<=radius+e.r){
-      const dealt=Math.min(e.hp,damage);
+      const dealt=Math.min(e.hp,weaponDamage(damage));
 
       e.hp-=dealt;
-      recordDamage("shockwave",dealt);
+      recordDamage("shockwave",dealt,e.x,e.y);
 
       if(e.boss){
         e.hitFlash=.12;
@@ -856,7 +947,7 @@ function shoot(dt){
   }
 }
 function addXp(v){
-  xp+=v;
+  xp+=v*startBonuses.xp;
   while(xp>=xpNeed){
     xp-=xpNeed; level++; xpNeed=Math.floor(xpNeed*1.15+3);
     playSfx("levelup");
@@ -928,7 +1019,9 @@ function hurtPlayer(d){
 }
 
 function gameOver(){
+  damageNumbers=[];
   running=false;
+  resetStartBonuses();
   syncBgmPlayback();
   document.getElementById("audioControls").style.display="block";
   document.getElementById("pauseButton").style.display="none";
@@ -1168,6 +1261,7 @@ function updateRandomEvent(dt){
 }
 
 function update(dt){
+  updateDamageNumbers(dt);
   evfxUpdate(dt);
   elapsed+=dt; hitCooldown=Math.max(0,hitCooldown-dt);
   updateRandomEvent(dt);
@@ -1231,9 +1325,9 @@ function update(dt){
         const dy=bh.y-e.y;
         const d=Math.hypot(dx,dy);
         if(d<=bh.r+e.r){
-          const dealt=Math.min(e.hp,bh.damage);
+          const dealt=Math.min(e.hp,weaponDamage(bh.damage));
           e.hp-=dealt;
-          recordDamage("blackhole",dealt);
+          recordDamage("blackhole",dealt,e.x,e.y);
           if(e.boss)e.hitFlash=.08;
 
           if(e.hp<=0){
@@ -1355,10 +1449,10 @@ function update(dt){
         const e=enemies[j];
         if(hitList.includes(e))continue;
         if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r){
-          const dealt=Math.min(e.hp,b.damage);
+          const dealt=Math.min(e.hp,weaponDamage(b.damage));
           e.hp-=dealt;
           if(e.boss)e.hitFlash=.12;
-          recordDamage("boomerang",dealt);
+          recordDamage("boomerang",dealt,e.x,e.y);
           if(b.evolved)evfxEmit("boomerang",b.x,b.y,35);
           hitList.push(e);
           for(let k=0;k<6;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.3});
@@ -1370,13 +1464,13 @@ function update(dt){
         const e=enemies[j];
         if(b.chainHits?.includes(e))continue;
         if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r){
-          const dealt=Math.min(e.hp,b.damage);
+          const dealt=Math.min(e.hp,weaponDamage(b.damage));
           e.hp-=dealt;
           if(e.boss)e.hitFlash=.12;
-          recordDamage(b.source,dealt);
+          recordDamage(b.source,dealt,e.x,e.y);
           if(b.evolved)evfxEmit(b.source,b.x,b.y,b.splash>0?b.splash:30,b.splash>0?"fire":"impact");
           remove=!branchChain(b,e);
-          if(b.burning)fireZones.push({x:b.x,y:b.y,r:b.splash*.8,damage:b.damage*.22,life:2.5,tick:.4});
+          if(b.burning)fireZones.push({x:b.x,y:b.y,r:b.splash*.5,damage:b.damage*.15,life:2.5,tick:.4});
           for(let k=0;k<6;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.3});
               if(b.splash>0){
             const splashTargets=[...enemies];
@@ -1389,10 +1483,10 @@ function update(dt){
                 Math.hypot(other.x-b.x,other.y-b.y)<b.splash
               ){
                 const splashDamage=b.damage*.99;
-                const dealtSplash=Math.min(other.hp,splashDamage);
+                const dealtSplash=Math.min(other.hp,weaponDamage(splashDamage));
 
                 other.hp-=dealtSplash;
-                recordDamage(b.source,dealtSplash);
+                recordDamage(b.source,dealtSplash,other.x,other.y);
 
                 if(other.hp<=0){
                   defeatEnemy(other);
@@ -1876,6 +1970,8 @@ function draw(){
     ctx.restore();
   }
 
+  drawDamageNumbers(sx,sy);
+
   // 캔버스에만 암흑을 덧그려 HUD와 선택창은 선명하게 유지한다.
   if(player && randomEvent.active && randomEvent.type==="darkness"){
     const x=sx(player.x),y=sy(player.y);
@@ -2035,7 +2131,7 @@ function showEvolutionChoice(w){
 }
 function branchDamage(enemy,damage,source){
  if(!enemies.includes(enemy)||enemy.hp<=0)return;
- const dealt=Math.min(enemy.hp,damage);enemy.hp-=dealt;recordDamage(source,dealt);if(enemy.boss)enemy.hitFlash=.12;if(enemy.hp<=0)defeatEnemy(enemy);
+ const dealt=Math.min(enemy.hp,weaponDamage(damage));enemy.hp-=dealt;recordDamage(source,dealt,enemy.x,enemy.y);if(enemy.boss)enemy.hitFlash=.12;if(enemy.hp<=0)defeatEnemy(enemy);
 }
 function shootWeapon(w){
  if(w.branch!=='alt'){shootWeaponBase(w);return;}
@@ -2056,7 +2152,7 @@ function shootWeapon(w){
  }
  if(w.type==='shotgun'){
   if(!nearestEnemies(1,player.range+100).length)return;
-  const n=4+lv+2+player.treasureMulti,damage=(95+lv*25+player.damageBonus)*1.25*.8;
+  const n=4+lv+2+player.treasureMulti,damage=(95+lv*25+player.damageBonus)*1.25*1.0;
   noise(.08,.08,0,700);evfxEmit('shotgun',player.x,player.y,95,'impact');
   for(let i=0;i<n;i++)addBullet(evolutionVfxClock*.5+i*Math.PI*2/n,damage,700,9,1.6,'shotgun',0,true);
   w.cooldown=Math.max(.65,1.68-lv*.08)/player.attackSpeed;return;

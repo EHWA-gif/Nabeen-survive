@@ -110,7 +110,7 @@ html,body{overscroll-behavior:none}
 #game{height:100dvh}
 #mobileControls{display:none;position:absolute;inset:0;pointer-events:none;z-index:8}
 #mobileControls[hidden]{display:none!important}
-#joystick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));width:clamp(100px,25vh,144px);height:clamp(100px,25vh,144px);border-radius:50%;border:2px solid #8bdefa77;background:#09203b66;box-shadow:inset 0 0 25px #58d5ff22;touch-action:none;pointer-events:auto;user-select:none;-webkit-user-select:none}
+#joystick{position:absolute;left:0;top:0;bottom:auto;transform:translate(-50%,-50%);visibility:hidden;width:clamp(100px,25vh,144px);height:clamp(100px,25vh,144px);border-radius:50%;border:2px solid #8bdefa77;background:#09203b66;box-shadow:inset 0 0 25px #58d5ff22;touch-action:none;pointer-events:auto;user-select:none;-webkit-user-select:none}
 #joystick::before{content:'이동';position:absolute;top:9px;width:100%;text-align:center;font-size:11px;color:#bdeaff99}
 #joystickKnob{position:absolute;left:50%;top:50%;width:42%;height:42%;margin-left:-21%;margin-top:-21%;border-radius:50%;background:#74ddffc9;border:2px solid #d5f6ff;box-shadow:0 2px 12px #0007;pointer-events:none}
 #mobileUltimate{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));width:76px;height:76px;padding:8px;margin:0;border:2px solid #ffd54a;border-radius:50%;background:#352b0de6;color:#ffe082;font-size:15px;touch-action:none;pointer-events:auto}
@@ -423,6 +423,7 @@ const joystickState={pointerId:null,x:0,y:0};
 function resetJoystick(){
  joystickState.pointerId=null;joystickState.x=0;joystickState.y=0;
  const knob=document.getElementById('joystickKnob');if(knob)knob.style.transform='translate(0px,0px)';
+ const stick=document.getElementById('joystick');if(stick)stick.style.visibility='hidden';
 }
 function syncMobileControls(){
  const active=mobileMode&&running&&!paused&&!mobilePortrait&&!document.hidden;
@@ -438,7 +439,7 @@ function refreshMobileLayout(){
  const bounds=gameEl.getBoundingClientRect();
  mobilePortrait=mobileMode&&bounds.height>bounds.width;
  document.body.classList.toggle('mobile',mobileMode);
- const help=document.getElementById('movementHelp');if(help)help.textContent=mobileMode?'왼쪽 조이스틱으로 이동하고 오른쪽 버튼으로 필살기를 사용하세요.':'WASD 또는 방향키로 이동하세요.';
+ const help=document.getElementById('movementHelp');if(help)help.textContent=mobileMode?'화면 왼쪽을 터치해 조이스틱으로 이동하고 오른쪽 버튼으로 필살기를 사용하세요.':'WASD 또는 방향키로 이동하세요.';
  document.getElementById('rotateGuide').hidden=!mobilePortrait;
  resetJoystick();
  for(const key of Object.keys(keys))keys[key]=false;
@@ -464,6 +465,21 @@ function initMobileControls(){
   stick.setPointerCapture(e.pointerId);move(e);
  });
  stick.addEventListener('pointermove',move);
+ // 화면 왼쪽을 처음 누른 위치에 조이스틱을 띄우는 플로팅 방식
+ gameEl.addEventListener('pointerdown',e=>{
+  if(!mobileMode||!running||paused||mobilePortrait||joystickState.pointerId!==null)return;
+  if(e.target.closest('button, input, select, #joystick, #mobileUltimate, #mobileMeterToggle, .panel, .card, .treasure-card, .evolution-choice'))return;
+  if(e.clientX>innerWidth*.58)return;
+  e.preventDefault();
+  const controls=document.getElementById('mobileControls'),bounds=controls.getBoundingClientRect();
+  const scaleX=bounds.width/(controls.offsetWidth||bounds.width)||1;
+  const scaleY=bounds.height/(controls.offsetHeight||bounds.height)||1;
+  const half=stick.getBoundingClientRect().width/(2*scaleX)+8;
+  const x=Math.max(half,Math.min(controls.offsetWidth-half,(e.clientX-bounds.left)/scaleX));
+  const y=Math.max(half,Math.min(controls.offsetHeight-half,(e.clientY-bounds.top)/scaleY));
+  stick.style.left=x+'px';stick.style.top=y+'px';stick.style.visibility='visible';
+  joystickState.pointerId=e.pointerId;stick.setPointerCapture(e.pointerId);move(e);
+ },{passive:false});
  function release(e){if(e.pointerId===joystickState.pointerId)resetJoystick();}
  for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,release);
  document.getElementById('mobileUltimate').addEventListener('pointerdown',e=>{

@@ -596,6 +596,12 @@ function resetStartBonuses(){
  startBonuses={damage:1,xp:1,speed:0,health:0};resetStartAllocation();
 }
 function weaponDamage(amount){return amount*startBonuses.damage;}
+// Clear both floor gems and experience waiting in the magnet animation.
+function resetGemState(){
+  gems=[];
+  magnetItems=[];
+  magnetEffect={active:false,time:0,duration:.85,gems:[],gained:0};
+}
 function beginGame(){
   resetJoystick();
   damageNumbers=[];damageNumberSerial=0;
@@ -605,7 +611,8 @@ function beginGame(){
   document.getElementById("pauseButton").style.display="block";
   document.getElementById("pauseMenu").style.display="none";
   document.getElementById("scoreValue").textContent="0";
-  enemies=[];bullets=[];gems=[];magnetItems=[];particles=[];
+  enemies=[];bullets=[];particles=[];
+  resetGemState();
   boss=null; nextBossTime=300; bossAttackTimer=3; bossWaveTimer=5;
   treasureChest=null; treasureChoices=[];
   silverChests=[];
@@ -1102,6 +1109,7 @@ function shoot(dt){
   }
 }
 function addXp(v){
+  if(!running)return;
   xp+=v*startBonuses.xp;
   while(xp>=xpNeed){
     xp-=xpNeed; level++; xpNeed=Math.floor(xpNeed*1.15+3);
@@ -1195,11 +1203,13 @@ function renderCombatRecord(record){
  return `<div class="combat-record-grid"><section class="combat-section"><h2>📊 무기별 누적 피해</h2><p>총 피해 <b>${number(record.totalDamage)}</b></p><table class="combat-table"><thead><tr><th scope="col">무기</th><th scope="col">피해량</th><th scope="col">비중</th></tr></thead><tbody>${rows||'<tr><td colspan="3">기록된 피해가 없습니다.</td></tr>'}</tbody></table><p class="combat-note">적의 실제 체력 감소량 기준입니다.<br>기존 딜 미터기와 동일하게 필살기 피해는 충격파에 포함됩니다.</p></section><div><section class="combat-section"><h2>✨ 선택한 진화</h2><ul class="combat-list">${evolved.length?evolved.map(w=>`<li>${w.evolution} <span style="color:#9fb5d5">Lv.${w.level}</span></li>`).join(''):'<li>진화한 무기 없음</li>'}</ul></section><section class="combat-section"><h2>⚔️ 시작 스탯 배분</h2><ul class="combat-list">${statRows}</ul><p class="combat-note">이번 판 시작 시 배분한 기록입니다.<br>다시 시작하면 5포인트를 새로 배분합니다.</p></section></div></div>`;
 }
 function gameOver(){
+  if(!running)return;
   resetJoystick();document.getElementById("mobileControls").hidden=true;
   // 게임오버 초기화 전에 이번 판 기록을 복사한다.
   const combatRecord=captureCombatRecord();
   damageNumbers=[];
   running=false;
+  resetGemState();
   resetStartBonuses();
   syncBgmPlayback();
   document.getElementById("audioControls").style.display="block";
@@ -1441,6 +1451,7 @@ function updateRandomEvent(dt){
 }
 
 function update(dt){
+  if(!running)return;
   updateDamageNumbers(dt);
   evfxUpdate(dt);
   elapsed+=dt; hitCooldown=Math.max(0,hitCooldown-dt);
@@ -1491,6 +1502,7 @@ function update(dt){
     nextBossTime += 300;
   }
   updateBoss(dt);
+  if(!running)return;
 
   // 블랙홀: 주변 적을 끌어당기면서 지속 피해를 준다.
   for(let i=blackholes.length-1;i>=0;i--){
@@ -1578,7 +1590,10 @@ function update(dt){
     const moveSpeed=(e.boss ? e.speed*(e.phase===2?1.18:1) : e.speed)*eventSpeedMultiplier;
     e.x+=Math.cos(a)*moveSpeed*dt;
     e.y+=Math.sin(a)*moveSpeed*dt;
-    if(Math.hypot(player.x-e.x,player.y-e.y)<player.r+e.r) hurtPlayer(e.damage*dt);
+    if(Math.hypot(player.x-e.x,player.y-e.y)<player.r+e.r){
+      hurtPlayer(e.damage*dt);
+      if(!running)return;
+    }
   }
 
   // 부메랑 무기: 바깥으로 날아갔다가 플레이어에게 되돌아온다.
@@ -2176,7 +2191,7 @@ function loop(now){
   if(!paused&&!mobilePortrait&&!document.hidden)update(dt);
   syncBgmPlayback();
   draw();
-  requestAnimationFrame(loop);
+  if(running)requestAnimationFrame(loop);
 }
 document.getElementById("startBtn").onclick=startGame;
 // Purely cosmetic: separate clock, fixed patterns, no gameplay random numbers.

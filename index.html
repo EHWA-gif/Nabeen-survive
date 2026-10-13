@@ -255,6 +255,12 @@ body.mobile #exchangeMenu{padding:max(6px,env(safe-area-inset-top)) max(10px,env
 
 .stock-portfolio{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:14px 0 6px}.stock-portfolio>div{padding:12px;background:#ffffffa8;border:1px solid #bec7d8;border-radius:8px;min-width:0}.stock-portfolio small{display:block;color:#64758b;font-size:10px;margin-bottom:7px}.stock-portfolio b{display:block;font-size:13px;overflow-wrap:anywhere;line-height:1.5}.stock-portfolio .stock-total-profit{background:#e2edf7;border-color:#8dabcb}.stock-event-guide{font-size:11px;margin-top:12px;color:#526783}.stock-event-guide summary{cursor:pointer;font-weight:bold}.stock-event-guide p{line-height:1.7}.stock-event-guide table{width:100%;border-collapse:collapse;margin:8px 0}.stock-event-guide th,.stock-event-guide td{text-align:left;padding:6px;border-bottom:1px solid #d7deea}@media(max-width:900px){.stock-portfolio{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.stock-portfolio{grid-template-columns:1fr 1fr}.stock-portfolio .stock-total-profit{grid-column:1/-1}}
 #stockBiasInfo{font-size:11px;color:#657497;line-height:1.6;margin:7px 0}
+#dispatchRewardPopup{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:110;background:#3342639c;pointer-events:auto;padding:16px;touch-action:pan-y}
+#dispatchRewardPopup .reward-panel{width:min(520px,96%);max-height:94%;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:linear-gradient(145deg,#f2f1fc,#fff8ec);border:1px solid #a9b6cd;border-radius:16px;padding:24px;color:#35425b;text-align:center;box-shadow:0 16px 60px #15294340}
+#dispatchRewardPopup h1{font-size:25px;margin:0 0 8px;color:#506f94}#dispatchRewardPopup p{font-size:13px;line-height:1.7;margin:8px 0;color:#60718a}#dispatchRewardGreat{padding:8px;border-radius:7px;background:#f1e6cb;color:#7d643c!important;font-weight:bold}#dispatchRewardGreat[hidden]{display:none}
+#dispatchRewardItems{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}.dispatch-reward-item{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #c6cbdc;border-radius:8px;padding:12px;background:#ffffffa8;text-align:left;font-size:13px}.dispatch-reward-item b{color:#4c7a9b;font-size:19px}
+#dispatchRewardBonus{padding:10px;background:#e4edf4;border-radius:8px;text-align:left;white-space:pre-line}#dispatchRewardBonus[hidden]{display:none}#dispatchRewardConfirm{background:#bad4e9;border:1px solid #89adcc;border-radius:8px;color:#2e4b68;min-width:140px;padding:11px 24px;font-size:15px;margin-top:12px}#dispatchRewardConfirm:focus-visible{outline:2px solid #477eac;outline-offset:3px}
+body.mobile #dispatchRewardPopup{padding:max(6px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}body.mobile #dispatchRewardPopup .reward-panel{max-height:100%;padding:14px 18px}body.mobile #dispatchRewardPopup h1{font-size:21px}body.mobile .dispatch-reward-item{padding:9px 11px}
 </style>
 </head>
 <body class="lobby-active">
@@ -319,6 +325,7 @@ body.mobile #exchangeMenu{padding:max(6px,env(safe-area-inset-top)) max(10px,env
  <p class="stock-rules">가격·거래 기록은 이 브라우저에 저장됩니다. 재접속하면 지난 시간의 가격 흐름이 반영됩니다.</p></div>
 </div>
 
+<div id="dispatchRewardPopup" role="dialog" aria-modal="true" aria-labelledby="dispatchRewardTitle"><div class="reward-panel"><h1 id="dispatchRewardTitle">🎒 파견 보상 획득!</h1><p id="dispatchRewardTrip"></p><p id="dispatchRewardGreat" hidden>✨ 대성공! 기본 재료 2배</p><div id="dispatchRewardItems"></div><p id="dispatchRewardBonus" hidden></p><p>재료는 보관함에 저장되었습니다.</p><button id="dispatchRewardConfirm" type="button" onclick="closeDispatchReward()">확인</button></div></div>
 <div id="kitchenMenu" role="dialog" aria-modal="true" aria-labelledby="kitchenTitle">
  <div class="kitchen-panel">
   <div class="kitchen-header"><h1 id="kitchenTitle">🍲 음식 · 파견</h1><button type="button" onclick="closeKitchen()" aria-label="음식 파견 메뉴 닫기">닫기</button></div>
@@ -667,6 +674,11 @@ addEventListener("resize",resize); resize();
 
 addEventListener("keydown",e=>{
   const key=e.key.toLowerCase();
+  if(dispatchRewardOpen){
+    if(key==='escape'||key==='enter'){e.preventDefault();closeDispatchReward();}
+    else if(key==='tab'){e.preventDefault();document.getElementById('dispatchRewardConfirm').focus();}
+    return;
+  }
   if(exchangeOpen){if(key==='escape'){e.preventDefault();closeExchange();}return;}
   if(startStatsOpen&&key==='escape'){e.preventDefault();cancelGameStart();return;}
   if(lobbyPanel){if(key==='escape'){e.preventDefault();closeLobbyPanels();}return;}
@@ -2700,7 +2712,7 @@ function kitchenRead(){
   return empty;
  }catch{return empty;}
 }
-let kitchenState=kitchenRead(),kitchenOpen=false,kitchenTab='dispatch',currentMeal=null,kitchenShownReady=false;
+let kitchenState=kitchenRead(),kitchenOpen=false,kitchenTab='dispatch',currentMeal=null,kitchenShownReady=false,dispatchRewardOpen=false;
 function kitchenCommit(next){
  try{localStorage.setItem(KITCHEN_KEY,JSON.stringify(next));kitchenState=next;return true;}
  catch{document.getElementById('kitchenNotice').textContent='저장하지 못했습니다. 브라우저 저장 공간을 확인하세요. 변경은 적용되지 않았습니다.';return false;}
@@ -2715,7 +2727,7 @@ function openKitchen(tab='dispatch'){
  if(!kitchenEditable())return;closeExchange();closeLobbyPanels();closeMetaShop();kitchenState=kitchenRead();kitchenTab=tab==='cook'?'cook':'dispatch';kitchenOpen=true;
  document.getElementById('kitchenMenu').style.display='flex';document.getElementById('kitchenNotice').textContent='';renderKitchen();
 }
-function closeKitchen(){kitchenOpen=false;document.getElementById('kitchenMenu').style.display='none';}
+function closeKitchen(){kitchenOpen=false;closeDispatchReward();document.getElementById('kitchenMenu').style.display='none';}
 function startExpedition(id){
  if(!kitchenEditable())return;const region=EXPEDITIONS.find(r=>r.id===id),minutes=selectedExpeditionMinutes;
  if(!region||!EXPEDITION_DURATIONS.includes(minutes))return;
@@ -2730,13 +2742,26 @@ function startExpedition(id){
  if(kitchenCommit(next)){document.getElementById('kitchenNotice').textContent=`${region.name}에 ${expeditionDurationLabel(minutes)} 파견을 보냈습니다. 진행 중에는 시간을 변경할 수 없습니다.`;renderKitchen();}
 }
 function claimExpedition(){
- if(!kitchenEditable())return;const next=kitchenFresh(),d=next.dispatch;if(!d||Date.now()<d.endsAt)return;
+ if(!kitchenEditable()||dispatchRewardOpen)return;const next=kitchenFresh(),d=next.dispatch;if(!d||Date.now()<d.endsAt)return;
  const previousMinutes=next.totalMinutes;for(const [k,n] of Object.entries(d.rewards))next.ingredients[k]=Math.min(1000000,next.ingredients[k]+n);
  let discovered='';if(d.recipe&&!next.known.includes(d.recipe)){next.known.push(d.recipe);discovered=RECIPES.find(r=>r.id===d.recipe).name;}
  next.completed++;next.totalMinutes=Math.min(1000000,next.totalMinutes+d.durationMinutes);next.dispatch=null;
  const unlocked=EXPEDITIONS.filter(r=>r.unlockMinutes>previousMinutes&&r.unlockMinutes<=next.totalMinutes).map(r=>r.name);
  next.lastResult=`${d.great?'✨ 대성공! 기본 재료 2배 · ':''}${kitchenRewardText(d.rewards)}${discovered?' · 📖 레시피 발견: '+discovered:''}${unlocked.length?' · 🗺️ 새 지역 해금: '+unlocked.join(', '):''}`;
- if(kitchenCommit(next)){document.getElementById('kitchenNotice').textContent='파견 보상을 받았습니다.';renderKitchen();}
+ if(kitchenCommit(next)){document.getElementById('kitchenNotice').textContent='파견 보상을 받았습니다.';renderKitchen();showDispatchReward(d,discovered,unlocked);}
+}
+function showDispatchReward(dispatch,discovered,unlocked){
+ const region=EXPEDITIONS.find(r=>r.id===dispatch.id);
+ document.getElementById('dispatchRewardTrip').textContent=`${region.name} · ${expeditionDurationLabel(dispatch.durationMinutes)} 파견 완료`;
+ document.getElementById('dispatchRewardGreat').hidden=!dispatch.great;
+ document.getElementById('dispatchRewardItems').innerHTML=Object.entries(dispatch.rewards).filter(([key,n])=>INGREDIENTS[key]&&n>0).map(([key,n])=>`<div class="dispatch-reward-item"><span>${INGREDIENTS[key]}</span><b>+${n.toLocaleString()}</b></div>`).join('');
+ const bonus=[discovered?'📖 새 레시피: '+discovered:'',unlocked.length?'🗺️ 새 지역 해금: '+unlocked.join(', '):''].filter(Boolean).join('\n');
+ document.getElementById('dispatchRewardBonus').textContent=bonus;document.getElementById('dispatchRewardBonus').hidden=!bonus;
+ dispatchRewardOpen=true;document.getElementById('dispatchRewardPopup').style.display='flex';document.getElementById('dispatchRewardConfirm').focus?.();
+}
+function closeDispatchReward(){
+ if(!dispatchRewardOpen)return;dispatchRewardOpen=false;document.getElementById('dispatchRewardPopup').style.display='none';
+ if(kitchenOpen)document.getElementById('kitchenDispatchTab').focus?.();
 }
 function cookMeal(id){
  if(!kitchenEditable())return;const recipe=RECIPES.find(r=>r.id===id);if(!recipe)return;

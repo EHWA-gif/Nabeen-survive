@@ -324,7 +324,7 @@ body.mobile #dispatchRewardPopup{padding:max(6px,env(safe-area-inset-top)) max(1
  <div id="stockPicks"></div>
  <div class="exchange-body"><section class="stock-chart-panel"><div class="stock-chart-title"><div><h2 id="stockSelectedName">나빈단</h2><strong id="stockSelectedPrice">20.00 코인</strong></div><div class="stock-chart-controls"><button id="stockFrame15" type="button" onclick="setStockFrame(15)">15분봉</button><button id="stockFrame60" type="button" onclick="setStockFrame(60)">1시간봉</button><button type="button" onclick="zoomStock(-1)" aria-label="차트 확대">＋</button><button type="button" onclick="zoomStock(1)" aria-label="차트 축소">−</button></div></div><p id="stockOhlc"></p><canvas id="stockChart" role="img" aria-label="선택한 종목의 캔들 차트"></canvas><p id="stockChartHint"></p><p id="stockCountdown"></p><p id="stockBiasInfo"></p></section>
  <section class="stock-order-panel"><h2>내 보유 현황</h2><dl><div><dt>보유 수량</dt><dd id="stockHolding">0주</dd></div><div><dt>평균 매수가</dt><dd id="stockAverage">—</dd></div><div><dt>평가 손익</dt><dd id="stockPnl">0</dd></div></dl><p id="stockLimitUsed"></p><label for="stockQty">거래 수량</label><input id="stockQty" type="number" min="1" step="1" inputmode="numeric" value="1"><p id="stockOrderPreview"></p><div class="stock-trade-buttons"><button type="button" onclick="tradeStock('buy')">매수</button><button type="button" onclick="tradeStock('sell')">매도</button></div><p id="stockNotice" role="status" aria-live="polite"></p></section></div>
- <div class="stock-bottom-grid"><section><h2>시장 소식</h2><ul id="stockNews"></ul><details class="stock-event-guide"><summary>시장 소식 이벤트 종류</summary><p>30분마다 45% 확률로 임의의 한 종목에 발생합니다. 해당 종목의 다음 이벤트가 발생할 때까지 확률 효과가 유지됩니다. 이벤트가 발생하지 않으면 기존 효과를 유지합니다.</p><table><thead><tr><th>이벤트</th><th>가격 영향</th></tr></thead><tbody><tr><td>레이드 대성공</td><td>상승 60% · 하락 40%</td></tr><tr><td>신규 단원 합류</td><td>상승 60% · 하락 40%</td></tr><tr><td>연구 프로젝트 성공</td><td>상승 60% · 하락 40%</td></tr><tr><td>레이드 대실패</td><td>상승 40% · 하락 60%</td></tr><tr><td>단원 인원 감소</td><td>상승 40% · 하락 60%</td></tr><tr><td>연구 프로젝트 차질</td><td>상승 40% · 하락 60%</td></tr></tbody></table><p>이벤트가 없으면 상승·하락 확률은 각각 50%입니다. 상승 이벤트 중에도 하락할 수 있습니다. 변동 폭은 종목별 기존 기준을 유지합니다.</p></details></section><section><h2>최근 거래</h2><ul id="stockTrades"></ul></section></div>
+ <div class="stock-bottom-grid"><section><h2>시장 소식</h2><ul id="stockNews"></ul><details class="stock-event-guide" open><summary>🔎 시장 이벤트 진단</summary><div id="stockEventDiagnostics" style="white-space:pre-line;line-height:1.8;margin-top:8px;overflow-wrap:anywhere"></div><p>진단 내용을 캡처해서 보내주세요. 추첨 결과를 확인만 하며 가격·보유 주식·이벤트 확률은 변경하지 않습니다.</p></details><details class="stock-event-guide"><summary>시장 소식 이벤트 종류</summary><p>30분마다 45% 확률로 임의의 한 종목에 발생합니다. 해당 종목의 다음 이벤트가 발생할 때까지 확률 효과가 유지됩니다. 이벤트가 발생하지 않으면 기존 효과를 유지합니다.</p><table><thead><tr><th>이벤트</th><th>가격 영향</th></tr></thead><tbody><tr><td>레이드 대성공</td><td>상승 60% · 하락 40%</td></tr><tr><td>신규 단원 합류</td><td>상승 60% · 하락 40%</td></tr><tr><td>연구 프로젝트 성공</td><td>상승 60% · 하락 40%</td></tr><tr><td>레이드 대실패</td><td>상승 40% · 하락 60%</td></tr><tr><td>단원 인원 감소</td><td>상승 40% · 하락 60%</td></tr><tr><td>연구 프로젝트 차질</td><td>상승 40% · 하락 60%</td></tr></tbody></table><p>이벤트가 없으면 상승·하락 확률은 각각 50%입니다. 상승 이벤트 중에도 하락할 수 있습니다. 변동 폭은 종목별 기존 기준을 유지합니다.</p></details></section><section><h2>최근 거래</h2><ul id="stockTrades"></ul></section></div>
  <p class="stock-rules">가격·거래 기록은 이 브라우저에 저장됩니다. 재접속하면 지난 시간의 가격 흐름이 반영됩니다.</p></div>
 </div>
 
@@ -2968,6 +2968,41 @@ function updateStockPreview(ex){
  const buy=Math.ceil(price*q-1e-9),sell=Math.floor(price*q+1e-9);
  label.textContent=`매수 총액 ${buy+stockFee(buy)}코인 · 매도 수령 ${Math.max(0,sell-stockFee(sell))}코인`;
 }
+// Read-only diagnostics reconstruct the existing deterministic draws, without rerolling.
+function stockDiagnosticReport(ex,tick){
+ const currentBlock=Math.floor(tick/6),createdBlock=Math.floor(ex.createdTick/6);
+ const firstBlock=Math.max(createdBlock+1,currentBlock-2879);
+ const latest=stockEmptyEvents();let checked=0,hits=0,recentChecks=0,recentHits=0;
+ for(let block=firstBlock;block<=currentBlock;block++){
+  checked++;const recent=block>currentBlock-12;if(recent)recentChecks++;
+  const event=stockNews(ex,block);if(!event)continue;
+  hits++;latest[event.id]=block;if(recent)recentHits++;
+ }
+ const mismatch=STOCKS.filter(s=>latest[s.id]!==null&&ex.market.events[s.id]!==latest[s.id]).map(s=>s.name);
+ const wallTick=Math.floor(Date.now()/STOCK_TICK_MS);
+ return {attempts:Math.max(0,currentBlock-createdBlock),checked,hits,recentChecks,recentHits,latest,mismatch,clockAhead:ex.createdTick>wallTick||ex.market.tick>wallTick};
+}
+function renderStockDiagnostics(ex,tick){
+ const d=stockDiagnosticReport(ex,tick);
+ const date=at=>new Date(at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false});
+ const lastAttempt=Math.floor(tick/6)*6*STOCK_TICK_MS;
+ const lines=[
+  `시장 시작 기준: ${date(ex.createdTick*STOCK_TICK_MS)} (5분 단위 저장)`,
+  `현재 시각: ${date(Date.now())} · 한국 시간`,
+  `시장 처리 시각: ${date(ex.market.tick*STOCK_TICK_MS)}`,
+  `시작 이후 추첨 기회: ${d.attempts}회`,
+  `최근 최대 60일 검사: ${d.checked}회 추첨 / ${d.hits}회 발생`,
+  `최근 6시간: ${d.recentChecks}회 추첨 / ${d.recentHits}회 발생`,
+  `마지막 추첨: ${d.attempts?date(lastAttempt):'아직 추첨 시각 전'}`,
+  `다음 추첨: ${date(lastAttempt+6*STOCK_TICK_MS)} · 발생 확률 45%`,
+  `시장 식별 번호: ${ex.seed} · 엔진 ${ex.engine}`,
+  '', '종목별 마지막 적용 이벤트:'
+ ];
+ for(const s of STOCKS){const block=ex.market.events[s.id],n=block===null?null:stockNews(ex,block);lines.push(`${s.name}: ${n?`${n.title} · ${date(block*6*STOCK_TICK_MS)}`:'적용된 이벤트 없음'}`);}
+ lines.push('',d.clockAhead?'⚠ 저장된 시장 시각이 현재 시각보다 앞섭니다. 기기 날짜와 시간을 확인하세요.':d.mismatch.length?`⚠ 추첨 결과와 적용 기록 불일치: ${d.mismatch.join(', ')}`:d.hits===0?'검사 범위에서 이벤트 추첨이 모두 미발생했습니다.':'검사 범위의 이벤트 추첨 결과와 적용 기록이 일치합니다.');
+ document.getElementById('stockEventDiagnostics').textContent=lines.join('\n');
+}
+
 function renderExchange(force=false){
  if(!exchangeOpen)return;const current=freshMetaAccount();metaProgress=current;const ex=readExchange(current.exchange);if(!ex)return;
  const tick=stockNowTick(ex),previousTick=ex.market?.tick;
@@ -2984,8 +3019,8 @@ function renderExchange(force=false){
  document.getElementById('stockCountdown').textContent=`다음 가격 갱신 ${Math.ceil((STOCK_TICK_MS-Date.now()%STOCK_TICK_MS)/1000)}초 · 가격은 5분마다 변동`;
  document.getElementById('stockFrame15').classList.toggle('selected',stockFrame===15);document.getElementById('stockFrame60').classList.toggle('selected',stockFrame===60);
  renderStockPortfolio(ex,tick);renderStockBias(ex,selectedStock);updateStockPreview(ex);
- if(force||stockDrawnTick!==tick){stockDrawnTick=tick;drawStockChart(ex);const items=[];for(let block=Math.floor(tick/6);block>Math.floor(ex.createdTick/6)&&items.length<4&&block>Math.floor(tick/6)-12;block--){const n=stockNews(ex,block);if(n)items.push(n);}
- document.getElementById('stockNews').innerHTML=items.length?items.map(n=>`<li><b>${n.name}</b> · ${n.title}<small>${stockTime(n.block*6*STOCK_TICK_MS)} · ${n.impact>0?'상승':'하락'} 이벤트</small></li>`).join(''):'<li>아직 발생한 뉴스가 없습니다. 30분마다 확률적으로 새 이벤트가 발생합니다.</li>';
+ if(force||stockDrawnTick!==tick){renderStockDiagnostics(ex,tick);stockDrawnTick=tick;drawStockChart(ex);const items=[];for(let block=Math.floor(tick/6);block>Math.floor(ex.createdTick/6)&&items.length<4&&block>Math.floor(tick/6)-12;block--){const n=stockNews(ex,block);if(n)items.push(n);}
+ document.getElementById('stockNews').innerHTML=items.length?items.map(n=>`<li><b>${n.name}</b> · ${n.title}<small>${stockTime(n.block*6*STOCK_TICK_MS)} · ${n.impact>0?'상승':'하락'} 이벤트</small></li>`).join(''):'<li>최근 6시간에 발생한 시장 소식이 없습니다. 이벤트는 30분마다 45% 확률로 발생합니다.</li>';
  document.getElementById('stockTrades').innerHTML=ex.trades.length?[...ex.trades].reverse().slice(0,8).map(t=>`<li>${STOCKS.find(s=>s.id===t.id).name} ${t.qty}주 <b>${t.side==='buy'?'매수':'매도'}</b><small>${stockTime(t.at)} · ${t.side==='buy'?'−':'+'}${t.total}코인</small></li>`).join(''):'<li>아직 거래 기록이 없습니다.</li>';}
 }
 function renderStockPortfolio(ex,tick){

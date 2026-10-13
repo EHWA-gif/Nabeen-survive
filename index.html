@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Nabeen survivor 2.0</title>
+<title>Nabeen survivor 3.0</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b12;font-family:Arial,"Malgun Gothic",sans-serif;color:#fff}
@@ -312,6 +312,9 @@ body.mobile #dispatchRewardPopup{padding:max(6px,env(safe-area-inset-top)) max(1
     <div class="audio-row"><label for="damageNumbersEnabled" style="width:110px">피해 숫자 표시</label><select id="damageNumbersEnabled" style="flex:1;background:#172033;color:#fff;padding:7px;border:1px solid #526788;border-radius:6px"><option value="on">켜기</option><option value="off">끄기</option></select></div>
     <button id="pauseMute" type="button">🔊 음소거</button><br>
     <div id="evolutionBuilds" style="white-space:pre-line;font-size:13px;line-height:1.7;color:#a5d8f3;margin-top:12px">선택한 진화: 없음</div><button id="resumeButton" type="button">계속하기</button>
+    <p id="pauseSettlementPreview" style="color:#ffe082;font-size:13px"></p>
+    <button id="settleQuitButton" type="button" onclick="settleAndQuit()" style="background:#e7bd79;color:#302515">정산하고 나가기</button>
+    <p id="pauseSettlementStatus" role="status" style="color:#ffb4b4;font-size:13px"></p>
   </div>
 </div>
 <div id="exchangeMenu" role="dialog" aria-modal="true" aria-labelledby="exchangeTitle">
@@ -710,6 +713,9 @@ function togglePause(){
   paused=true;
   for(const key of Object.keys(keys))keys[key]=false;
   updateAudioGains();
+  const score=Math.floor(elapsed)*10+kills*20;
+  document.getElementById("pauseSettlementPreview").textContent=`현재 점수 ${score.toLocaleString()}점 · 정산 시 ${Math.floor(score/100).toLocaleString()}코인 · 전투 기록 확인 후 로비로 이동`;
+  document.getElementById("pauseSettlementStatus").textContent="";
   menu.style.display="flex";
   last=performance.now();
 }
@@ -1433,8 +1439,21 @@ function renderCombatRecord(record){
  const statRows=START_STAT_OPTIONS.map(o=>`<li>${o.name} <b>${record.allocation[o.key]}포인트</b> <span style="color:#9fb5d5">(+${Math.round(record.allocation[o.key]*o.rate*100)}%)</span></li>`).join('');
  return `<div class="combat-record-grid"><section class="combat-section"><h2>📊 무기별 누적 피해</h2><p>총 피해 <b>${number(record.totalDamage)}</b></p><table class="combat-table"><thead><tr><th scope="col">무기</th><th scope="col">피해량</th><th scope="col">비중</th></tr></thead><tbody>${rows||'<tr><td colspan="3">기록된 피해가 없습니다.</td></tr>'}</tbody></table><p class="combat-note">적의 실제 체력 감소량 기준입니다.<br>기존 딜 미터기와 동일하게 필살기 피해는 충격파에 포함됩니다.</p></section><div><section class="combat-section"><h2>✨ 선택한 진화</h2><ul class="combat-list">${evolved.length?evolved.map(w=>`<li>${w.evolution} <span style="color:#9fb5d5">Lv.${w.level}</span></li>`).join(''):'<li>진화한 무기 없음</li>'}</ul></section><section class="combat-section"><h2>⚔️ 시작 스탯 배분</h2><ul class="combat-list">${statRows}</ul><p class="combat-note">이번 판 시작 시 배분한 기록입니다.<br>다시 시작하면 5포인트를 새로 배분합니다.</p></section></div></div>`;
 }
-function gameOver(){
+function settleAndQuit(){
+  if(!running||!paused||document.getElementById("pauseMenu").style.display!=="flex")return;
+  gameOver("settlement");
+}
+
+function gameOver(reason="defeat"){
   if(!running)return;
+  const voluntary=reason==="settlement";
+  const survivalSeconds=Math.floor(elapsed);
+  const finalScore=survivalSeconds*10+kills*20;
+  const coinReward=awardMetaCoins(finalScore);
+  if(voluntary&&!metaStorageOK){
+    document.getElementById("pauseSettlementStatus").textContent="정산 저장에 실패했습니다. 저장 공간을 확인한 뒤 다시 시도하거나 계속하기를 눌러주세요.";
+    return;
+  }
   leaveLobby();
   resetJoystick();document.getElementById("mobileControls").hidden=true;
   // 게임오버 초기화 전에 이번 판 기록을 복사한다.
@@ -1452,14 +1471,10 @@ function gameOver(){
   paused=false;
   playSfx("gameover");
 
-  const survivalSeconds=Math.floor(elapsed);
-  const finalScore=survivalSeconds*10+kills*20;
-  const coinReward=awardMetaCoins(finalScore);
-
   document.getElementById("centerMsg").style.display="flex";
   document.getElementById("centerMsg").innerHTML=
     `<div class="panel combat-summary">
-      <h1>💀 게임 오버</h1>
+      <h1>${voluntary?"🪙 전투 정산 완료":"💀 게임 오버"}</h1>
       <p style="color:#ffe082">${currentGameMode==='challenge'?'🏆 챌린지 모드':'⚔️ 일반 모드'}</p>
       <p>생존 시간 <b>${formatTime(elapsed)}</b></p>
       <p>처치 <b>${kills}</b> · 레벨 <b>${level}</b></p>

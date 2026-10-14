@@ -334,6 +334,14 @@ body.mobile .daily-quest-card p{font-size:10px;margin:5px 0 7px}
 body.mobile .lobby-character{flex-basis:110px;height:125px}
 @media(max-width:700px){.lobby-content,body.mobile .lobby-content{grid-template-columns:1fr}.daily-quest-panel,body.mobile .daily-quest-panel{margin-top:8px}.daily-quest-panel{width:auto}}
 
+
+.gear-power-card{display:flex;align-items:center;gap:18px;margin:15px 0 14px;padding:20px 24px;border:1px solid #a1b5d3;border-radius:14px;background:linear-gradient(115deg,#e0eaf7,#efebfa);box-shadow:0 5px 18px #687fad15}
+.gear-power-icon{display:grid;place-items:center;flex:0 0 58px;height:58px;border:1px solid #b6c6de;border-radius:15px;background:#ffffffa6;font-size:30px}
+.gear-power-main{min-width:0}.gear-power-label{display:block;font-size:13px;letter-spacing:.6px;color:#617491}.gear-power-main strong{display:block;margin-top:4px;font-size:38px;line-height:1.2;color:#38577c;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#equipmentMenu .gear-power-card p{margin:0 0 0 auto;color:#6b7790;font-size:12px;text-align:right}
+@media(max-width:700px){.gear-power-card{gap:12px;padding:14px}.gear-power-icon{flex-basis:43px;height:43px;font-size:24px}.gear-power-main strong{font-size:29px}#equipmentMenu .gear-power-card p{font-size:10px;max-width:80px}}
+#damageMeter .dm-row{gap:12px;align-items:baseline}#damageMeter .dm-row>b{flex-shrink:0;font-variant-numeric:tabular-nums}#damageMeter .dm-weapon-name{min-width:0;overflow-wrap:anywhere}#damageMeter .dm-level{display:inline-block;margin-left:5px;color:#b5d5ed;font-size:.85em;white-space:nowrap}
+
 </style>
 </head>
 <body class="lobby-active">
@@ -362,13 +370,13 @@ body.mobile .lobby-character{flex-basis:110px;height:125px}
 <div id="ultimateHud"><div class="ultimate-title" id="ultimateTitle">💥 아아앜 READY</div><div class="ultimate-key">SPACE</div></div>
 <div id="damageMeter">
   <h3>⚔️ 실시간 딜미터기</h3>
-  <div class="dm-row"><span>🔮 나쫀쿠</span><b id="dmgMagic">0</b></div>
-  <div class="dm-row"><span>🔫 산탄총</span><b id="dmgShotgun">0</b></div>
-  <div class="dm-row"><span>☄️ 화염구</span><b id="dmgFireball">0</b></div>
-  <div class="dm-row"><span>🌀 충격파</span><b id="dmgShockwave">0</b></div>
-  <div class="dm-row"><span>🪃 마법구</span><b id="dmgBoomerang">0</b></div>
-  <div class="dm-row"><span>🕳️ 블랙홀</span><b id="dmgBlackhole">0</b></div>
-  <div class="dm-row"><span>🔆 탈모빔</span><b id="dmgLaser">0</b></div>
+  <div class="dm-row"><span class="dm-weapon-name">🔮 나쫀쿠<small class="dm-level" id="dmgMagicLevel">Lv.0</small></span><b id="dmgMagic">0</b></div>
+  <div class="dm-row"><span class="dm-weapon-name">🔫 산탄총<small class="dm-level" id="dmgShotgunLevel">Lv.0</small></span><b id="dmgShotgun">0</b></div>
+  <div class="dm-row"><span class="dm-weapon-name">☄️ 화염구<small class="dm-level" id="dmgFireballLevel">Lv.0</small></span><b id="dmgFireball">0</b></div>
+  <div class="dm-row"><span class="dm-weapon-name">🌀 충격파<small class="dm-level" id="dmgShockwaveLevel">Lv.0</small></span><b id="dmgShockwave">0</b></div>
+  <div class="dm-row"><span class="dm-weapon-name">🪃 마법구<small class="dm-level" id="dmgBoomerangLevel">Lv.0</small></span><b id="dmgBoomerang">0</b></div>
+  <div class="dm-row"><span class="dm-weapon-name">🕳️ 블랙홀<small class="dm-level" id="dmgBlackholeLevel">Lv.0</small></span><b id="dmgBlackhole">0</b></div>
+  <div class="dm-row"><span class="dm-weapon-name">🔆 탈모빔<small class="dm-level" id="dmgLaserLevel">Lv.0</small></span><b id="dmgLaser">0</b></div>
   <div class="dm-row dm-total"><span>TOTAL</span><b id="dmgTotal">0</b></div>
   <div class="dm-row dm-dps"><span>DPS</span><b id="dmgDps">0</b></div>
 </div>
@@ -420,7 +428,7 @@ body.mobile .lobby-character{flex-basis:110px;height:125px}
 </div>
 
 <div id="gearRecycleConfirm" role="dialog" aria-modal="true" aria-labelledby="gearRecycleTitle"><div class="recycle-panel"><h2 id="gearRecycleTitle">장비 분해 확인</h2><p>아래 장비를 분해합니다. 분해한 장비는 되돌릴 수 없습니다.</p><ul id="gearRecycleList"></ul><p id="gearRecycleSummary"></p><p id="gearRecycleStatus" role="status"></p><button type="button" onclick="gearCancelRecycle()" style="background:#d5e3f1;color:#354b6b">취소</button><button id="gearRecycleConfirmButton" type="button" onclick="gearConfirmRecycle()" style="background:#d9aa71;color:#392917">분해하고 모듈 받기</button></div></div>
-<div id="equipmentMenu" role="dialog" aria-modal="true" aria-labelledby="gearTitle"><div class="gear-panel"><div class="gear-header"><h1 id="gearTitle">🎒 장비 관리</h1><span id="gearBalance"></span><button type="button" onclick="closeEquipment()">닫기</button></div><p>파견에서 B·A·S 장비 획득 · 보스당 모듈 2~5개 최종 정산 · 챌린지에서는 장비 효과 제외</p><div id="gearSlots"></div><p id="gearTotals"></p><div class="gear-body"><section><h2>장비 보관함</h2><div id="gearFilters"></div><button type="button" onclick="gearRequestBatchRecycle()">미장착·미보호 B등급 일괄 분해</button><div id="gearInventory"></div></section><section id="gearDetail"></section></div><p id="gearStatus" role="status" aria-live="polite"></p><p>장비는 부위별 1개 장착 · 강화 최대 +10 · +1~+4 성공 100% / +5~+10 성공 75·65·55·45·35·25%<br>강화 실패 시 코인만 소모하고 단계 유지 · 부옵션 잠금 0·1·2개일 때 변경 비용 모듈 1·2·3개</p></div></div>
+<div id="equipmentMenu" role="dialog" aria-modal="true" aria-labelledby="gearTitle"><div class="gear-panel"><div class="gear-header"><h1 id="gearTitle">🎒 장비 관리</h1><span id="gearBalance"></span><button type="button" onclick="closeEquipment()">닫기</button></div><section class="gear-power-card" aria-label="총 전투력"><span class="gear-power-icon" aria-hidden="true">⚔️</span><div class="gear-power-main"><span class="gear-power-label">총 전투력</span><strong id="gearCombatPower">0</strong></div><p>장착 장비 · 영구 스탯</p></section><p>파견에서 B·A·S 장비 획득 · 보스당 모듈 2~5개 최종 정산 · 챌린지에서는 장비 효과 제외</p><div id="gearSlots"></div><div class="gear-body"><section><h2>장비 보관함</h2><div id="gearFilters"></div><button type="button" onclick="gearRequestBatchRecycle()">미장착·미보호 B등급 일괄 분해</button><div id="gearInventory"></div></section><section id="gearDetail"></section></div><p id="gearStatus" role="status" aria-live="polite"></p><p>장비는 부위별 1개 장착 · 강화 최대 +10 · +1~+4 성공 100% / +5~+10 성공 75·65·55·45·35·25%<br>강화 실패 시 코인만 소모하고 단계 유지 · 부옵션 잠금 0·1·2개일 때 변경 비용 모듈 1·2·3개</p></div></div>
 <div id="metaShop" role="dialog" aria-modal="true" aria-labelledby="metaShopTitle">
  <div class="panel">
   <h1 id="metaShopTitle">🏅 영구 스탯 강화</h1>
@@ -932,11 +940,18 @@ function gearReroll(id){
  for(let i=0;i<3;i++){if(item.options[i]?.locked)continue;if(gearRandom()<GEAR_OPTION_EMPTY_CHANCE){item.options[i]=null;continue;}const pool=GEAR_STATS.filter(s=>!used.has(s.id)),stat=pool[Math.floor(gearRandom()*pool.length)].id;used.add(stat);const value=(Math.round(grade.min*10)+Math.floor(gearRandom()*(Math.round((grade.max-grade.min)*10)+1)))/10;item.options[i]={stat,value,locked:false};}
  next.gear.modules-=cost;gearCommit(next,`부옵션 변경 완료 · ${item.options.filter(Boolean).length}/3개 부여 · 모듈 −${cost}개 · 잠긴 옵션 유지`,'gearOption');
 }
+// Display-only rating: gear and permanent percentages are added, without changing combat stats.
+const COMBAT_POWER_WEIGHTS={attack:150,experience:100,pickup:70,health:50,speed:60};
+function equipmentCombatPower(account){
+ const gear=account.gear,stats=gearStats(gear.items,gear.equipped);
+ for(const upgrade of META_UPGRADES)stats[upgrade.key]+=(account.levels[upgrade.key]||0)*upgrade.perLevel;
+ return Math.round(Object.entries(COMBAT_POWER_WEIGHTS).reduce((total,[key,weight])=>total+stats[key]*100*weight,0));
+}
 function renderEquipment(){
  metaProgress=freshMetaAccount();const gear=metaProgress.gear;
  document.getElementById('gearBalance').innerHTML=`🪙 ${metaProgress.coins.toLocaleString()} 코인 · ${gearModuleIcon()} <b>${gear.modules.toLocaleString()}개</b>`;
  document.getElementById('gearSlots').innerHTML=GEAR_SLOTS.map(s=>{const item=gear.items.find(i=>i.id===gear.equipped[s.id]);return `<button type="button" class="gear-slot ${item?'equipped':''}" onclick="${item?`gearSelect('${item.id}')`:`gearSetFilter('${s.id}')`}"><span>${s.icon} ${s.name}</span><b>${item?`${item.grade}등급 +${item.level}`:'미장착'}</b><small>${GEAR_STATS.find(o=>o.id===s.main).name}${item?' +'+gearMain(item)+'%':''}</small></button>`;}).join('');
- const stats=gearStats(gear.items,gear.equipped);document.getElementById('gearTotals').textContent='장비 합계: '+GEAR_STATS.map(s=>`${s.name} +${(stats[s.id]*100).toFixed(1)}%`).join(' · ')+' · 일반 모드만 적용';
+ document.getElementById('gearCombatPower').textContent=equipmentCombatPower(metaProgress).toLocaleString('ko-KR');
  document.getElementById('gearFilters').innerHTML=[{id:'all',name:'전체'},...GEAR_SLOTS].map(s=>`<button type="button" class="${gearFilter===s.id?'selected':''}" onclick="gearSetFilter('${s.id}')">${s.name}</button>`).join('');
  const list=gear.items.filter(i=>gearFilter==='all'||i.slot===gearFilter).slice().reverse();
  if(!list.some(i=>i.id===gearSelectedId))gearSelectedId=list[0]?.id||null;
@@ -1272,8 +1287,8 @@ function updateDamageMeter(){
     const weapon=weapons.find(w=>w.type===names[i]);
     const lv=weapon ? weapon.level : 0;
 
-    document.getElementById(ids[i]).textContent=
-      `Lv.${lv}  ${Math.floor(value).toLocaleString()}`;
+    document.getElementById(ids[i]+'Level').textContent=`Lv.${lv}`;
+    document.getElementById(ids[i]).textContent=Math.floor(value).toLocaleString();
   }
 
   document.getElementById("dmgTotal").textContent=
@@ -2131,11 +2146,12 @@ function update(dt){
 
   shoot(dt);
 
+  const slowingAura=weapons.find(w=>w.type==='shockwave'&&w.branch==='alt'&&w.level>0);
   for(const e of enemies){
     const a=Math.atan2(player.y-e.y,player.x-e.x);
     // 보스도 적 배열에 들어가지만, 일반 적보다 확실히 빠르게 추격한다.
     const eventSpeedMultiplier=randomEvent.active&&randomEvent.type==="berserk"?1.35:1;
-    const moveSpeed=(e.boss ? e.speed*(e.phase===2?1.18:1) : e.speed)*eventSpeedMultiplier;
+    const moveSpeed=(e.boss ? e.speed*(e.phase===2?1.18:1) : e.speed)*eventSpeedMultiplier*shockwaveAuraSpeedMultiplier(e,slowingAura);
     e.x+=Math.cos(a)*moveSpeed*dt;
     e.y+=Math.sin(a)*moveSpeed*dt;
     if(Math.hypot(player.x-e.x,player.y-e.y)<player.r+e.r){
@@ -2846,7 +2862,7 @@ const ALT_EVOLUTION_INFO={
  magic:{name:'⚡ 연쇄 나쫀쿠',desc:'투사체가 최대 2번 다른 적에게 튕깁니다. 튕길 때마다 피해가 25% 감소합니다. 같은 적을 다시 맞히지 않습니다.'},
  shotgun:{name:'🌪️ 회전 산탄',desc:'같은 수의 산탄을 전방 대신 360도로 발사합니다. 탄환당 피해는 기존 진화의 80%입니다.'},
  fireball:{name:'🔥 불지옥',desc:'폭발 피해는 기존 진화의 80%. 폭발 지점에 2.5초 동안 불바닥을 남겨 0.4초마다 추가 피해를 줍니다.'},
- shockwave:{name:'🔷 진동 결계',desc:'기존 진화 범위의 60%인 결계가 플레이어를 따라옵니다. 기본 0.45초마다 기존 진화 피해의 25%를 주며 밀쳐내지 않습니다. 공격속도에 따라 빨라집니다.'},
+ shockwave:{name:'🔷 진동 결계',desc:'기존 진화 범위의 60%인 결계가 플레이어를 따라옵니다. 기본 0.45초마다 기존 진화 피해의 25%를 주며 밀쳐내지 않습니다. 공격속도에 따라 빨라집니다. 결계 안의 적 이동속도를 50% 감소시키며, 벗어나면 해제됩니다.'},
  boomerang:{name:'🪐 위성 마법구',desc:'마법구가 플레이어 주변을 공전합니다. 접촉 피해는 기존 진화의 55%, 각 마법구의 기본 재타격 간격은 0.45초이며 공격속도에 따라 빨라집니다.'},
  blackhole:{name:'💥 붕괴 블랙홀',desc:'지속 피해는 기존 진화의 70%. 종료 직전 폭발 범위를 표시하고, 종료 시 기존 진화 1회 피해의 3배로 폭발합니다.'},
  laser:{name:'🌀 회전 탈모빔',desc:'기존 길이를 유지하며 0.6초 동안 약 90도를 훑습니다. 폭은 기존 진화의 60%, 피해는 75%. 한 발사당 각 적은 한 번만 맞습니다.'}
@@ -2925,6 +2941,11 @@ function branchChain(b,enemy){
  b.chainLeft--;b.damage*=.75;const angle=Math.atan2(next.y-b.y,next.x-b.x),speed=Math.hypot(b.vx,b.vy);b.vx=Math.cos(angle)*speed;b.vy=Math.sin(angle)*speed;
  b.life=Math.max(b.life,.6);evfxEmit('magic',b.x,b.y,40,'impact');return true;
 }
+const SHOCKWAVE_AURA_SLOW=0.50;
+function shockwaveAuraRadius(aura){return (180+aura.level*20+30+Math.min(Math.max(player.range-520,0),500)*.35)*.6;}
+function shockwaveAuraSpeedMultiplier(enemy,aura){
+ return aura&&aura.level>0&&aura.branch==='alt'&&Math.hypot(enemy.x-player.x,enemy.y-player.y)<=shockwaveAuraRadius(aura)+enemy.r?1-SHOCKWAVE_AURA_SLOW:1;
+}
 function branchUpdate(dt){
  for(let i=fireZones.length-1;i>=0;i--){
   const z=fireZones[i];z.life-=dt;z.tick-=dt;
@@ -2932,7 +2953,7 @@ function branchUpdate(dt){
   if(z.life<=0)fireZones.splice(i,1);
  }
  const aura=weapons.find(w=>w.type==='shockwave'&&w.branch==='alt');
- if(aura){aura.auraTimer=(aura.auraTimer||0)-dt;const radius=(180+aura.level*20+30+Math.min(Math.max(player.range-520,0),500)*.35)*.6;
+ if(aura){aura.auraTimer=(aura.auraTimer||0)-dt;const radius=shockwaveAuraRadius(aura);
   if(aura.auraTimer<=0){aura.auraTimer=.45/player.attackSpeed;for(const e of [...enemies])if(Math.hypot(e.x-player.x,e.y-player.y)<=radius+e.r)branchDamage(e,(45+aura.level*18+player.damageBonus*.45)*1.30*.25,'shockwave');evfxEmit('shockwave',player.x,player.y,radius,'impact');}
  }
  const orbital=weapons.find(w=>w.type==='boomerang'&&w.branch==='alt');
@@ -2957,7 +2978,7 @@ function drawBranchEffects(sx,sy){
  for(const z of fireZones){const x=sx(z.x),y=sy(z.y);ctx.globalAlpha=Math.min(1,z.life/.5)*.38;const glow=ctx.createRadialGradient(x,y,0,x,y,z.r);glow.addColorStop(0,'#ff7a1855');glow.addColorStop(.8,'#ff3b3055');glow.addColorStop(1,'#ff3b3000');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,z.r,0,Math.PI*2);ctx.fill();evfxRing(x,y,z.r,'#ff983e',2);
   for(let i=0;i<10;i++){const a=i*2.399+evolutionVfxClock*.3,r=z.r*(.3+(i%4)*.15);evfxStar(x+Math.cos(a)*r,y+Math.sin(a)*r,4+Math.sin(evolutionVfxClock*8+i)*2,a,'#ffd166');}}
  const aura=weapons.find(w=>w.type==='shockwave'&&w.branch==='alt');
- if(aura){const r=(180+aura.level*20+30+Math.min(Math.max(player.range-520,0),500)*.35)*.6;ctx.globalAlpha=.28;evfxRing(sx(player.x),sy(player.y),r,'#67e8f9',2);ctx.save();ctx.translate(sx(player.x),sy(player.y));ctx.rotate(evolutionVfxClock*.4);ctx.strokeStyle='#a5f3fc';ctx.beginPath();for(let i=0;i<=6;i++){const a=i*Math.PI/3;if(!i)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.stroke();ctx.restore();}
+ if(aura){const r=shockwaveAuraRadius(aura);ctx.globalAlpha=.28;evfxRing(sx(player.x),sy(player.y),r,'#67e8f9',2);ctx.save();ctx.translate(sx(player.x),sy(player.y));ctx.rotate(evolutionVfxClock*.4);ctx.strokeStyle='#a5f3fc';ctx.beginPath();for(let i=0;i<=6;i++){const a=i*Math.PI/3;if(!i)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.stroke();ctx.restore();}
  for(const orb of orbitOrbs){ctx.globalAlpha=.85;const x=sx(orb.x),y=sy(orb.y);const glow=ctx.createRadialGradient(x,y,0,x,y,30);glow.addColorStop(0,'#ffffff');glow.addColorStop(.3,'#60a5fa');glow.addColorStop(1,'#60a5fa00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,30,0,Math.PI*2);ctx.fill();evfxRing(x,y,22,'#bfdbfe',2);evfxStar(x,y,28,evolutionVfxClock*4,'#dbeafe');}
  for(const bh of blackholes){if(bh.collapse&&bh.life<.7){ctx.globalAlpha=.35+.25*Math.sin(evolutionVfxClock*22);evfxRing(sx(bh.x),sy(bh.y),bh.r,'#f0abfc',4);}}
  ctx.restore();

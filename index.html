@@ -425,7 +425,7 @@ body.mobile #marketPaper{padding:8px 14px}body.mobile .market-paper-sheet{paddin
 </div>
 <div id="exchangeMenu" role="dialog" aria-modal="true" aria-labelledby="exchangeTitle">
  <div class="exchange-panel"><header class="exchange-header"><div><h1 id="exchangeTitle">📈 가상 거래소</h1><p>코인으로 사고파는 나만의 시장</p></div><div><b id="stockCoinBalance">🪙 0 코인</b><button type="button" onclick="closeExchange()">닫기</button></div></header>
- <p class="stock-rules">매수 금액 한도 없음 · 매매 수수료 1% (최소 1코인) · 코인 단위로 결제<br>평균 매수가는 매수 수수료 포함, 평가 손익은 매도 수수료 차감 전입니다.</p>
+ <p class="stock-rules">매수 금액 한도 없음 · 매매 수수료 1% (최소 1코인) · 코인 단위로 결제<br>계산 주가가 1코인 미만이면 해당 종목 파산: 보유 주식 전량 소멸 · 매입 원금 손실 확정 · 기본 가격으로 재상장<br>평균 매수가는 매수 수수료 포함, 평가 손익은 매도 수수료 차감 전입니다.</p>
  <section class="stock-portfolio" aria-label="전체 투자 현황"><div><small>보유 매수 원금</small><b id="stockTotalBasis">0</b></div><div><small>보유 평가 금액</small><b id="stockTotalValue">0</b></div><div><small>보유 평가 손익</small><b id="stockTotalUnrealized">0</b></div><div><small>누적 실현 손익</small><b id="stockTotalRealized">0</b></div><div class="stock-total-profit"><small>종합 손익</small><b id="stockTotalProfit">0</b></div></section><p id="stockPortfolioNote" class="stock-rules"></p>
  <div id="stockPicks"></div>
  <div class="exchange-body"><section class="stock-chart-panel"><div class="stock-chart-title"><div><h2 id="stockSelectedName">나빈단</h2><strong id="stockSelectedPrice">20.00 코인</strong></div><div class="stock-chart-controls"><button id="stockFrame15" type="button" onclick="setStockFrame(15)">15분봉</button><button id="stockFrame60" type="button" onclick="setStockFrame(60)">1시간봉</button><button type="button" onclick="zoomStock(-1)" aria-label="차트 확대">＋</button><button type="button" onclick="zoomStock(1)" aria-label="차트 축소">−</button></div></div><p id="stockOhlc"></p><canvas id="stockChart" role="img" aria-label="선택한 종목의 캔들 차트"></canvas><p id="stockChartHint"></p><p id="stockCountdown"></p></section>
@@ -434,7 +434,7 @@ body.mobile #marketPaper{padding:8px 14px}body.mobile .market-paper-sheet{paddin
  <p class="stock-rules">가격·거래 기록은 이 브라우저에 저장됩니다. 재접속하면 지난 시간의 가격 흐름이 반영됩니다.</p></div>
 </div>
 
-<div id="marketPaper" role="dialog" aria-modal="true" aria-labelledby="marketPaperHeadline"><article id="marketPaperSheet" class="market-paper-sheet"><div class="paper-topline"><span>가상 거래소 · 시장 속보</span><button id="marketPaperClose" type="button" onclick="closeMarketPaper()" aria-label="시장 신문 닫기">✕</button></div><h1 class="paper-masthead">나빈 경제신문</h1><p id="marketPaperDate"></p><span id="marketPaperCategory" class="paper-category"></span><h2 id="marketPaperHeadline"></h2><div class="paper-story"><p id="marketPaperBody"></p><div class="paper-quote"><small>이벤트 즉시 보정</small><b id="marketPaperStock"></b><strong id="marketPaperImpact"></strong></div></div><p id="marketPaperEffect"></p><nav class="paper-pagination" aria-label="기사 넘기기"><button id="marketPaperPrev" type="button" onclick="turnMarketPaper(-1)">← 이전</button><span id="marketPaperPage"></span><button id="marketPaperNext" type="button" onclick="turnMarketPaper(1)">다음 →</button></nav><div class="paper-actions"><button id="marketPaperTrade" type="button" onclick="marketPaperExchangeLink()">거래소 보기</button><button id="marketPaperDismiss" type="button" onclick="closeMarketPaper()">닫기</button></div><p id="marketPaperSaveNote"></p></article></div>
+<div id="marketPaper" role="dialog" aria-modal="true" aria-labelledby="marketPaperHeadline"><article id="marketPaperSheet" class="market-paper-sheet"><div class="paper-topline"><span>가상 거래소 · 시장 속보</span><button id="marketPaperClose" type="button" onclick="closeMarketPaper()" aria-label="시장 신문 닫기">✕</button></div><h1 class="paper-masthead">나빈 경제신문</h1><p id="marketPaperDate"></p><span id="marketPaperCategory" class="paper-category"></span><h2 id="marketPaperHeadline"></h2><div class="paper-story"><p id="marketPaperBody"></p><div class="paper-quote"><small id="marketPaperQuoteLabel">이벤트 즉시 보정</small><b id="marketPaperStock"></b><strong id="marketPaperImpact"></strong></div></div><p id="marketPaperEffect"></p><nav class="paper-pagination" aria-label="기사 넘기기"><button id="marketPaperPrev" type="button" onclick="turnMarketPaper(-1)">← 이전</button><span id="marketPaperPage"></span><button id="marketPaperNext" type="button" onclick="turnMarketPaper(1)">다음 →</button></nav><div class="paper-actions"><button id="marketPaperTrade" type="button" onclick="marketPaperExchangeLink()">거래소 보기</button><button id="marketPaperDismiss" type="button" onclick="closeMarketPaper()">닫기</button></div><p id="marketPaperSaveNote"></p></article></div>
 <div id="dispatchCancelPopup" role="dialog" aria-modal="true" aria-labelledby="dispatchCancelTitle" aria-describedby="dispatchCancelWarning"><div class="dispatch-cancel-panel"><h2 id="dispatchCancelTitle">파견을 취소할까요?</h2><p id="dispatchCancelTrip"></p><p id="dispatchCancelWarning">취소하면 이번 파견의 재료·장비·레시피 보상을 받지 못하며,<br>경과한 시간도 누적 파견 시간에 반영되지 않습니다.</p><p>취소 후에는 바로 새 파견을 보낼 수 있습니다.</p><p id="dispatchCancelStatus" role="status" aria-live="polite"></p><div class="dispatch-cancel-actions"><button id="dispatchCancelKeep" type="button" onclick="closeExpeditionCancel()">계속 파견하기</button><button id="dispatchCancelConfirm" type="button" onclick="confirmExpeditionCancel()">파견 취소</button></div></div></div>
 <div id="dispatchRewardPopup" role="dialog" aria-modal="true" aria-labelledby="dispatchRewardTitle"><div class="reward-panel"><h1 id="dispatchRewardTitle">🎒 파견 보상 획득!</h1><p id="dispatchRewardTrip"></p><p id="dispatchRewardGreat" hidden>✨ 대성공! 기본 재료 2배</p><div id="dispatchRewardItems"></div><p id="dispatchRewardBonus" hidden></p><p>재료는 보관함에 저장되었습니다.</p><button id="dispatchRewardConfirm" type="button" onclick="closeDispatchReward()">확인</button></div></div>
 <div id="kitchenMenu" role="dialog" aria-modal="true" aria-labelledby="kitchenTitle">
@@ -3270,7 +3270,7 @@ const STOCKS=[{id:'nabin',start:20,name:'나빈단',vol:.02,label:'안정형'},{
 let exchangeOpen=false,selectedStock='nabin',stockFrame=15,stockVisible=48,stockHover=-1,stockDrawnTick=-1;
 let stockCandleCache={key:null,bars:[]};
 function stockHash(seed,tick,salt){let x=(seed^Math.imul(tick|0,0x45d9f3b)^Math.imul(salt+1,0x27d4eb2d))>>>0;x=Math.imul(x^(x>>>16),0x7feb352d);x=Math.imul(x^(x>>>15),0x846ca68b);return ((x^(x>>>16))>>>0)/4294967296;}
-function newExchange(){const a=new Uint32Array(1);if(globalThis.crypto?.getRandomValues)crypto.getRandomValues(a);else a[0]=(Date.now()^0x6a09e667)>>>0;const tick=Math.floor(Date.now()/STOCK_TICK_MS),prices=Object.fromEntries(STOCKS.map(s=>[s.id,s.start*100])),events=stockEmptyEvents();return {seed:a[0]||1,createdTick:tick,positions:Object.fromEntries(STOCKS.map(s=>[s.id,{qty:0,cost:0}])),trades:[],realized:0,realizedFromUpgrade:false,engine:2,baseTick:tick,basePrices:prices,baseEvents:events,market:{tick,prices:{...prices},events:{...events},history:[[tick,...STOCKS.map(s=>prices[s.id])]]}};}
+function newExchange(){const a=new Uint32Array(1);if(globalThis.crypto?.getRandomValues)crypto.getRandomValues(a);else a[0]=(Date.now()^0x6a09e667)>>>0;const tick=Math.floor(Date.now()/STOCK_TICK_MS),prices=Object.fromEntries(STOCKS.map(s=>[s.id,s.start*100])),events=stockEmptyEvents();return {seed:a[0]||1,createdTick:tick,positions:Object.fromEntries(STOCKS.map(s=>[s.id,{qty:0,cost:0}])),trades:[],realized:0,bankruptcies:[],realizedFromUpgrade:false,engine:2,baseTick:tick,basePrices:prices,baseEvents:events,market:{tick,prices:{...prices},events:{...events},history:[[tick,...STOCKS.map(s=>prices[s.id])]]}};}
 function readExchange(raw){
  if(!raw||!Number.isInteger(raw.seed)||raw.seed<1||raw.seed>4294967295||!Number.isSafeInteger(raw.createdTick)||raw.createdTick<0)return null;
  const positions={};for(const s of STOCKS){const q=raw.positions?.[s.id];const qty=metaStoredInteger(q?.qty);const cost=Number(q?.cost);positions[s.id]={qty,cost:qty&&Number.isFinite(cost)&&cost>=0?cost:0};}
@@ -3286,6 +3286,7 @@ function readExchange(raw){
    if(!history.length||history[history.length-1][0]!==m.tick)ex.market.history.push([m.tick,...STOCKS.map(s=>m.prices[s.id])]);
   }else ex.market={tick:ex.baseTick,prices:{...ex.basePrices},events:{...ex.baseEvents},history:[[ex.baseTick,...STOCKS.map(s=>ex.basePrices[s.id])]]};
  }
+ ex.bankruptcies=stockReadBankruptcies(raw.bankruptcies,ex.createdTick,ex.market?.tick??ex.createdTick);
  return ex;
 }
 function stockNowTick(ex){return Math.max(ex.createdTick,ex.market?.tick||0,Math.floor(Date.now()/STOCK_TICK_MS));}
@@ -3318,21 +3319,66 @@ function stockUpChance(ex,id,events,tick){
  const age=tick-block*6;if(age<0||age>=12)return .50;
  const n=stockNews(ex,block);return n?n.impact>0?.70:.30:.50;
 }
+function stockTrimBankruptcies(items){return [...items.filter(b=>b.qty>0).slice(-100),...items.filter(b=>b.qty===0).slice(-100)].sort((a,b)=>a.tick-b.tick);}
+function stockReadBankruptcies(raw,createdTick,maxTick){
+ const out=[],used=new Set();if(!Array.isArray(raw))return out;
+ for(const b of raw){
+  if(!b||!STOCKS.some(s=>s.id===b.id)||!Number.isSafeInteger(b.tick)||b.tick<createdTick||b.tick>maxTick||!Number.isSafeInteger(b.qty)||b.qty<0||!Number.isFinite(b.loss)||b.loss<0)continue;
+  const key=`${b.id}:${b.tick}`;if(used.has(key))continue;used.add(key);out.push({id:b.id,tick:b.tick,qty:b.qty,loss:b.loss});
+ }
+ return stockTrimBankruptcies(out.sort((a,b)=>a.tick-b.tick));
+}
+function stockBankrupt(ex,id,tick,prices,events){
+ const stock=STOCKS.find(s=>s.id===id);prices[id]=stock.start*100;events[id]=null;
+ ex.bankruptcies??=[];
+ if(ex.bankruptcies.some(b=>b.id===id&&b.tick===tick))return;
+ const pos=ex.positions[id],qty=pos.qty,loss=pos.cost;
+ ex.realized-=loss;ex.positions[id]={qty:0,cost:0};
+ ex.bankruptcies.push({id,tick,qty,loss});ex.bankruptcies=stockTrimBankruptcies(ex.bankruptcies);
+}
+function stockSetQuote(ex,id,tick,value,prices,events){
+ // Detect the actual calculated price before rounding or applying a price floor.
+ if(value<100){stockBankrupt(ex,id,tick,prices,events);return true;}
+ prices[id]=Math.min(200000,Math.round(value));return false;
+}
+function syncStockAccount(){
+ const account=freshMetaAccount(),ex=readExchange(account.exchange);if(!ex)return {account,exchange:null};
+ const engine=ex.engine,tick=ex.market?.tick;upgradeStockEngine(ex);advanceStockMarket(ex,stockNowTick(ex));
+ if(engine!==ex.engine||tick!==ex.market.tick){
+  account.exchange=ex;
+  if(!commitMetaAccount(account)){stockStatus('시장 변동을 저장하지 못했습니다. 거래와 파산 처리는 저장 후 적용됩니다. 다시 시도해주세요.');return null;}
+ }
+ return {account,exchange:ex};
+}
+function stockBankruptcyArticles(ex){
+ const minimum=Math.floor(Date.now()/STOCK_TICK_MS)-288;
+ return (ex?.bankruptcies||[]).filter(b=>b.tick<=Math.floor(Date.now()/STOCK_TICK_MS)&&(b.tick>=minimum||b.qty>0)).map(b=>({
+  kind:'bankruptcy',paperId:`bankrupt:${b.id}:${b.tick}`,id:b.id,name:STOCKS.find(s=>s.id===b.id).name,tick:b.tick,block:Math.floor(b.tick/6),impact:0,title:'파산 후 재상장',qty:b.qty,loss:b.loss
+ }));
+}
+function marketPaperArticleKey(item){return item.paperId??item.block;}
+function marketPaperArticleTick(item){return item.tick??item.block*6;}
+function marketPaperRetainedKeys(ex,seen){
+ const active=new Set((ex.bankruptcies||[]).map(b=>`bankrupt:${b.id}:${b.tick}`));
+ return [...[...seen].filter(Number.isSafeInteger).sort((a,b)=>b-a).slice(0,96),...[...seen].filter(key=>typeof key==='string'&&active.has(key))];
+}
+
 function stockStep(ex,tick,prices,events){
+ const resetThisTick=new Set();
  if(tick%6===0){
   const n=stockNews(ex,tick/6);
   if(n){
    events[n.id]=n.block;
    // Apply the event once on its scheduled tick, before the ordinary price move.
-   prices[n.id]=Math.max(100,Math.min(200000,Math.round(prices[n.id]*(1+n.impact))));
+   if(stockSetQuote(ex,n.id,tick,prices[n.id]*(1+n.impact),prices,events))resetThisTick.add(n.id);
   }
  }
- for(let i=0;i<STOCKS.length;i++){const s=STOCKS[i],up=stockHash(ex.seed,tick,130+i)<stockUpChance(ex,s.id,events,tick),magnitude=s.vol*(.1+.9*stockHash(ex.seed,tick,150+i));prices[s.id]=Math.max(100,Math.min(200000,Math.round(prices[s.id]*(1+(up?magnitude:-magnitude)))));}
+ for(let i=0;i<STOCKS.length;i++){const s=STOCKS[i];if(resetThisTick.has(s.id))continue;const up=stockHash(ex.seed,tick,130+i)<stockUpChance(ex,s.id,events,tick),magnitude=s.vol*(.1+.9*stockHash(ex.seed,tick,150+i));stockSetQuote(ex,s.id,tick,prices[s.id]*(1+(up?magnitude:-magnitude)),prices,events);}
 }
 function advanceStockMarket(ex,target){
  if(ex.engine!==2)return null;
  target=Math.max(ex.baseTick,target);const key=`${ex.seed}:${ex.baseTick}:${ex.market.tick}`;
- if(stockPathCache?.key===key&&stockPathCache.market.tick>=target){ex.market=stockPathCache.market;return stockPathCache;}
+ if(stockPathCache?.key===key&&stockPathCache.market===ex.market&&stockPathCache.market.tick>=target){ex.market=stockPathCache.market;return stockPathCache;}
  const prices={...ex.market.prices},events={...ex.market.events},keepStart=Math.max(ex.baseTick,target-2879),history=ex.market.history.filter(r=>r[0]>=keepStart).map(r=>r.slice());
  for(let t=ex.market.tick+1;t<=target;t++){stockStep(ex,t,prices,events);if(t>=keepStart)history.push([t,...STOCKS.map(s=>prices[s.id])]);}
  const tick=Math.max(ex.market.tick,target);ex.market={tick,prices,events,history:history.slice(-2880)};
@@ -3374,8 +3420,8 @@ function stockQuantity(){const input=document.getElementById('stockQty').value;c
 function tradeStock(side){
  if(!exchangeOpen||running||startStatsOpen||!['buy','sell'].includes(side))return;
  const qty=stockQuantity();if(!qty){stockStatus('수량은 1 이상 정수로 입력하세요.');return;}
- const next=freshMetaAccount(),ex=readExchange(next.exchange);if(!ex){stockStatus('거래 정보를 불러오지 못했습니다. 다시 열어주세요.');return;}
- upgradeStockEngine(ex);
+ const synced=syncStockAccount();if(!synced)return;if(!synced.exchange){stockStatus('거래 정보를 불러오지 못했습니다. 다시 열어주세요.');return;}
+ const next=structuredClone(synced.account),ex=structuredClone(synced.exchange);
  const price=stockPrice(ex,selectedStock,stockNowTick(ex))/100,pos=ex.positions[selectedStock];let total;
  if(side==='buy'){
   const gross=Math.ceil(price*qty-1e-9),fee=stockFee(gross);total=gross+fee;
@@ -3400,10 +3446,8 @@ function updateStockPreview(ex){
  label.textContent=`매수 총액 ${buy+stockFee(buy)}코인 · 매도 수령 ${Math.max(0,sell-stockFee(sell))}코인`;
 }
 function renderExchange(force=false){
- if(!exchangeOpen)return;const current=freshMetaAccount();metaProgress=current;const ex=readExchange(current.exchange);if(!ex)return;
- const tick=stockNowTick(ex),previousTick=ex.market?.tick;
- upgradeStockEngine(ex);advanceStockMarket(ex,tick);
- if(previousTick!==ex.market.tick){current.exchange=ex;commitMetaAccount(current);}
+ if(!exchangeOpen)return;const synced=syncStockAccount();if(!synced?.exchange)return;const current=synced.account,ex=synced.exchange;metaProgress=current;
+ const tick=stockNowTick(ex);
  const stock=STOCKS.find(s=>s.id===selectedStock),price=stockPrice(ex,selectedStock,tick)/100,pos=ex.positions[selectedStock];
  document.getElementById('stockCoinBalance').textContent=`🪙 ${current.coins.toLocaleString()} 코인`;
  document.getElementById('stockLimitUsed').textContent=`매수 금액 한도 없음 · 이 종목 원금 ${stockMoney(pos.cost)} 코인`;
@@ -3458,17 +3502,17 @@ function marketPaperArticles(ex){
  if(!ex)return [];
  const last=Math.floor(Date.now()/STOCK_TICK_MS/6),first=Math.max(Math.floor(ex.createdTick/6)+1,last-47),items=[];
  for(let block=last;block>=first;block--){const n=stockNews(ex,block);if(n)items.push(n);}
- return items;
+ return [...items,...stockBankruptcyArticles(ex)].sort((a,b)=>marketPaperArticleTick(b)-marketPaperArticleTick(a)||(b.kind==='bankruptcy')-(a.kind==='bankruptcy'));
 }
 function marketPaperSeen(ex){
  const market=marketPaperIdentity(ex);let blocks=[];
- try{const saved=JSON.parse(localStorage.getItem(MARKET_PAPER_KEY)||'null');if(saved?.market===market&&Array.isArray(saved.blocks))blocks=saved.blocks.filter(Number.isSafeInteger);}catch{}
+ try{const saved=JSON.parse(localStorage.getItem(MARKET_PAPER_KEY)||'null');if(saved?.market===market&&Array.isArray(saved.blocks))blocks=saved.blocks.filter(b=>Number.isSafeInteger(b)||(typeof b==='string'&&/^bankrupt:(nabin|najeung|nasa|nauterim):[0-9]+$/.test(b)));}catch{}
  if(marketPaperMemory.market===market)blocks.push(...marketPaperMemory.blocks);
  return new Set(blocks);
 }
 function markMarketPaperSeen(ex,items){
- const seen=marketPaperSeen(ex);for(const item of items)seen.add(item.block);
- marketPaperMemory={market:marketPaperIdentity(ex),blocks:[...seen].sort((a,b)=>b-a).slice(0,96)};
+ const seen=marketPaperSeen(ex);for(const item of items)seen.add(marketPaperArticleKey(item));
+ marketPaperMemory={market:marketPaperIdentity(ex),blocks:marketPaperRetainedKeys(ex,seen)};
  try{localStorage.setItem(MARKET_PAPER_KEY,JSON.stringify(marketPaperMemory));return true;}catch{return false;}
 }
 function marketPaperIdle(){
@@ -3518,28 +3562,30 @@ function unlockMarketPaperSound(){
 function renderMarketPaperStatus(){
  if(!marketPaperOpen)return;
  const item=marketPaperItems[marketPaperIndex],status=document.getElementById('marketPaperEffect');if(!item){status.textContent='새 소식이 생기면 로비에서 알려드려요.';return;}
+ if(item.kind==='bankruptcy'){status.textContent='파산 처리 완료 · 기존 이벤트 효과 종료 · 재상장 가격부터 거래 가능';return;}
  const now=Date.now(),end=(item.block*6+12)*STOCK_TICK_MS;
- const superseded=marketPaperArticles(marketPaperExchange).some(n=>n.id===item.id&&n.block>item.block);
+ const superseded=marketPaperArticles(marketPaperExchange).some(n=>n.id===item.id&&(marketPaperArticleTick(n)>marketPaperArticleTick(item)||(n.kind==='bankruptcy'&&marketPaperArticleTick(n)===marketPaperArticleTick(item))));
  status.textContent=now>=end?'이벤트 효과 종료':superseded?'이후 같은 종목의 새 시장소식으로 대체됨':`추세 효과 적용 중 · ${marketPaperTimestamp(end)}까지 · ${Math.ceil((end-now)/60000)}분 남음`;
 }
 function renderMarketPaper(){
- const item=marketPaperItems[marketPaperIndex],positive=item?.impact>0,panel=document.getElementById('marketPaperSheet');
+ const item=marketPaperItems[marketPaperIndex],bankrupt=item?.kind==='bankruptcy',positive=item?.impact>0,panel=document.getElementById('marketPaperSheet');
  panel.classList.toggle('paper-up',!!item&&positive);panel.classList.toggle('paper-down',!!item&&!positive);
- document.getElementById('marketPaperDate').textContent=item?marketPaperTimestamp(item.block*6*STOCK_TICK_MS)+' 발행 · 한국 시간':'최근 24시간 시장소식';
- document.getElementById('marketPaperCategory').textContent=item?(positive?'상승 소식':'하락 소식'):'시장 소식';
+ document.getElementById('marketPaperDate').textContent=item?marketPaperTimestamp(marketPaperArticleTick(item)*STOCK_TICK_MS)+' 발행 · 한국 시간':'최근 24시간 시장소식';
+ document.getElementById('marketPaperCategory').textContent=item?(bankrupt?'파산 · 재상장':positive?'상승 소식':'하락 소식'):'시장 소식';
  document.getElementById('marketPaperHeadline').textContent=item?`${item.name}, ${item.title}!`:'아직 발행된 기사가 없습니다';
- document.getElementById('marketPaperBody').textContent=item?MARKET_PAPER_COPY[item.title]:'거래소를 이용하고 시장소식이 발생하면 이곳에서 기사를 확인할 수 있습니다.';
+ document.getElementById('marketPaperBody').textContent=item?(bankrupt?`계산 주가가 1코인 미만으로 내려가 ${item.name}이 파산 처리됐습니다. 보유 주식 ${item.qty.toLocaleString()}주가 소멸했고, 매입 원금 ${stockMoney(item.loss)}코인을 실현 손실로 반영했습니다. 코인은 추가로 차감하지 않습니다. 해당 종목은 기본 가격으로 재상장됩니다.`:MARKET_PAPER_COPY[item.title]):'거래소를 이용하고 시장소식이 발생하면 이곳에서 기사를 확인할 수 있습니다.';
+ document.getElementById('marketPaperQuoteLabel').textContent=bankrupt?'재상장 기준가':'이벤트 즉시 보정';
  document.getElementById('marketPaperStock').textContent=item?item.name:'가상 거래소';
- document.getElementById('marketPaperImpact').textContent=item?(positive?'+8%':'−8%'):'—';
+ document.getElementById('marketPaperImpact').textContent=item?(bankrupt?`${STOCKS.find(s=>s.id===item.id).start}코인`:positive?'+8%':'−8%'):'—';
  document.getElementById('marketPaperPage').textContent=marketPaperItems.length?`${marketPaperIndex+1} / ${marketPaperItems.length} 기사`:'0 / 0 기사';
  document.getElementById('marketPaperPrev').disabled=!marketPaperItems.length||marketPaperIndex===0;
  document.getElementById('marketPaperNext').disabled=!marketPaperItems.length||marketPaperIndex>=marketPaperItems.length-1;
- document.getElementById('marketPaperSaveNote').textContent=marketPaperSaved?'최근 24시간 기사 · 표시된 등락은 이벤트 즉시 보정입니다.':'기사 확인 기록을 저장하지 못했습니다. 다시 접속하면 알림이 재표시될 수 있습니다.';
+ document.getElementById('marketPaperSaveNote').textContent=marketPaperSaved?'최근 24시간 기사 · 보유 주식의 파산 기록 포함 · 등락은 이벤트 즉시 보정입니다.':'기사 확인 기록을 저장하지 못했습니다. 다시 접속하면 알림이 재표시될 수 있습니다.';
  renderMarketPaperStatus();
 }
 function openMarketPaper(automatic=false){
  if(!marketPaperIdle())return;
- const ex=readExchange(freshMetaAccount().exchange),all=marketPaperArticles(ex),seen=ex?marketPaperSeen(ex):new Set(),items=automatic?all.filter(n=>!seen.has(n.block)):all;
+ const synced=syncStockAccount();if(!synced)return;const ex=synced.exchange,all=marketPaperArticles(ex),seen=ex?marketPaperSeen(ex):new Set(),items=automatic?all.filter(n=>!seen.has(marketPaperArticleKey(n))).sort((a,b)=>(b.kind==='bankruptcy'&&b.qty>0)-(a.kind==='bankruptcy'&&a.qty>0)||marketPaperArticleTick(b)-marketPaperArticleTick(a)):all;
  if(automatic&&!items.length)return;
  closeLobbyPanels();marketPaperExchange=ex;marketPaperItems=items;marketPaperIndex=0;marketPaperSession++;marketPaperOpen=true;marketPaperPendingSound=null;
  marketPaperSaved=ex?markMarketPaperSeen(ex,items):true;
@@ -3565,8 +3611,8 @@ function updateMarketPaperBadge(count){
 function checkMarketPaper(){
  if(marketPaperOpen){renderMarketPaperStatus();return;}
  if(!marketPaperIdle())return;
- const ex=readExchange(freshMetaAccount().exchange);if(!ex){updateMarketPaperBadge(0);return;}
- const seen=marketPaperSeen(ex),unread=marketPaperArticles(ex).filter(n=>!seen.has(n.block));updateMarketPaperBadge(unread.length);
+ const synced=syncStockAccount();if(!synced)return;const ex=synced.exchange;if(!ex){updateMarketPaperBadge(0);return;}
+ const seen=marketPaperSeen(ex),unread=marketPaperArticles(ex).filter(n=>!seen.has(marketPaperArticleKey(n)));updateMarketPaperBadge(unread.length);
  if(unread.length)openMarketPaper(true);
 }
 addEventListener('pointerdown',unlockMarketPaperSound);

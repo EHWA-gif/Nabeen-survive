@@ -2969,16 +2969,16 @@ const KITCHEN_KEY='nabeen.kitchen.v1';
 const INGREDIENTS={mushroom:'🍄 버섯',herb:'🌿 허브',flour:'🌾 밀가루',vegetable:'🥕 채소',meat:'🍖 고기',salt:'🧂 소금',honey:'🍯 꿀',rare:'✨ 신비의 열매',curry:'🍛 카레 (희귀)',water:'💧 물',sausage:'🌭 순대 (희귀)',coffee:'🫘 커피콩'};
 const RECIPES=[
  {id:'soup',name:'🍄 버섯 수프',cost:{mushroom:2,herb:1},buff:{xp:.10},runs:3,desc:'경험치 획득 +10%',basic:true},
- {id:'roast',name:'🍖 든든한 고기구이',cost:{meat:2,salt:1},buff:{health:.10},runs:3,desc:'최대 체력 +10%',basic:true},
+ {id:'roast',name:'🍖 양꼬치',cost:{meat:2,salt:1},buff:{health:.10},runs:3,desc:'최대 체력 +10%',basic:true},
  {id:'stir',name:'🥘 채소 볶음',cost:{vegetable:2,flour:1},buff:{damage:.05},runs:3,desc:'모든 무기 피해 +5%',basic:true},
  {id:'sweet',name:'🍯 꿀 디저트',cost:{honey:2,herb:1},buff:{speed:.05},runs:3,desc:'이동속도 +5%',basic:true},
- {id:'herbal',name:'🌿 향긋한 숲 스튜',cost:{mushroom:3,herb:3},buff:{xp:.10,health:.05},runs:3,desc:'경험치 +10% · 최대 체력 +5%',region:'forest'},
- {id:'feast',name:'🍲 사냥꾼의 만찬',cost:{meat:3,vegetable:2,salt:1},buff:{damage:.05,health:.10},runs:3,desc:'무기 피해 +5% · 최대 체력 +10%',region:'hunt'},
+ {id:'herbal',name:'🌿 향긋한 고수 스튜',cost:{mushroom:3,herb:3},buff:{xp:.10,health:.05},runs:3,desc:'경험치 +10% · 최대 체력 +5%',region:'forest'},
+ {id:'feast',name:'🍲 김찌찌개',cost:{meat:3,vegetable:2,salt:1},buff:{damage:.05,health:.10},runs:3,desc:'무기 피해 +5% · 최대 체력 +10%',region:'hunt'},
  {id:'curryPork',name:'🍛 카레수육',cost:{curry:1,meat:2,water:1},buff:{damage:.15,speed:.10},runs:5,desc:'모든 무기 피해 +15% · 이동속도 +10%',basic:true},
  {id:'sundae',name:'🌭 짭짤순대',cost:{sausage:1,salt:2,vegetable:1},buff:{health:.20,xp:.15},runs:5,desc:'최대 체력 +20% · 경험치 획득 +15%',basic:true},
  {id:'americano',name:'☕ 아메리카노',cost:{coffee:2,water:1,honey:2},buff:{speed:.05,damage:.05},runs:3,desc:'이동속도 +5% · 모든 무기 피해 +5%',basic:true},
  {id:'meatNoodles',name:'🍜 고기국수',cost:{meat:1,flour:2,vegetable:1},buff:{damage:.15},runs:3,desc:'모든 무기 피해 +15%',basic:true},
- {id:'special',name:'🍱 신비한 도시락',cost:{rare:1,honey:2,flour:2},buff:{damage:.05,xp:.10,speed:.05,health:.10},runs:5,desc:'피해 +5% · 경험치 +10% · 이동속도 +5% · 체력 +10%',region:'mystic'}
+ {id:'special',name:'🍱 편의점 도시락',cost:{rare:1,honey:2,flour:2},buff:{damage:.05,xp:.10,speed:.05,health:.10},runs:5,desc:'피해 +5% · 경험치 +10% · 이동속도 +5% · 체력 +10%',region:'mystic'}
 ];
 const EXPEDITION_DURATIONS=[30,60,120,240,480];
 let selectedExpeditionMinutes=30;

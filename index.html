@@ -3282,7 +3282,12 @@ function upgradeStockEngine(ex){
  for(let block=Math.floor(tick/6);block>Math.floor(ex.createdTick/6)&&block>=Math.floor(tick/6)-2880;block--){const n=stockNews(ex,block);if(n&&events[n.id]===null)events[n.id]=block;if(STOCKS.every(s=>events[s.id]!==null))break;}
  ex.engine=2;ex.baseTick=tick;ex.basePrices=prices;ex.baseEvents=events;ex.market={tick,prices:{...prices},events:{...events},history:[[tick,...STOCKS.map(s=>prices[s.id])]]};return ex;
 }
-function stockUpChance(ex,id,events){const block=events[id];const n=block===null?null:stockNews(ex,block);return n?n.impact>0?.60:.40:.50;}
+function stockUpChance(ex,id,events,tick){
+ const block=events[id];if(block==null)return .50;
+ // Event blocks are 30 minutes; price ticks are 5 minutes. Twelve ticks = one hour.
+ const age=tick-block*6;if(age<0||age>=12)return .50;
+ const n=stockNews(ex,block);return n?n.impact>0?.70:.30:.50;
+}
 function stockStep(ex,tick,prices,events){
  if(tick%6===0){
   const n=stockNews(ex,tick/6);
@@ -3292,7 +3297,7 @@ function stockStep(ex,tick,prices,events){
    prices[n.id]=Math.max(100,Math.min(200000,Math.round(prices[n.id]*(1+n.impact))));
   }
  }
- for(let i=0;i<STOCKS.length;i++){const s=STOCKS[i],up=stockHash(ex.seed,tick,130+i)<stockUpChance(ex,s.id,events),magnitude=s.vol*(.1+.9*stockHash(ex.seed,tick,150+i));prices[s.id]=Math.max(100,Math.min(200000,Math.round(prices[s.id]*(1+(up?magnitude:-magnitude)))));}
+ for(let i=0;i<STOCKS.length;i++){const s=STOCKS[i],up=stockHash(ex.seed,tick,130+i)<stockUpChance(ex,s.id,events,tick),magnitude=s.vol*(.1+.9*stockHash(ex.seed,tick,150+i));prices[s.id]=Math.max(100,Math.min(200000,Math.round(prices[s.id]*(1+(up?magnitude:-magnitude)))));}
 }
 function advanceStockMarket(ex,target){
  if(ex.engine!==2)return null;

@@ -659,7 +659,7 @@ body.arcade-open #centerMsg,body.arcade-open #centerMsg *{pointer-events:none!im
  <div class="mode-picker" role="group" aria-label="플레이 모드 선택"><button id="normalModeBtn" type="button" onclick="setGameMode('normal')">⚔️ 자유 모드</button><button id="challengeModeBtn" type="button" onclick="setGameMode('challenge')">🏆 챌린지 모드</button></div><p id="modeDesc"></p></header>
  <div class="prep-columns"><section class="prep-column prep-stats"><h2>시작 스탯</h2><p>매 판 5포인트 · 스탯당 최대 3포인트</p><p id="statPointsLeft"></p><div id="startStatRows"></div><p id="startStatsPreview"></p><p>게임오버 시 배분과 보너스가 초기화됩니다.</p><button type="button" onclick="resetStartAllocation();renderStartStats()">배분 초기화</button><p id="gearStartInfo"></p><p id="mealStartInfo"></p><label id="mealStartToggle"><input id="useMealThisRun" type="checkbox" checked onchange="renderStartStats()"> 이번 판에 음식 사용 (자유 모드)</label></section>
  <section class="prep-column prep-penalties"><h2>패널티 조절</h2><p>0단계는 미적용 · 효과는 원래 수치 기준으로 적용됩니다.<br>점수 보너스는 합산되며 코인·플레이어 EXP에도 반영됩니다.</p><div id="penaltyRows"></div><button id="resetPenaltyButton" type="button" onclick="resetRunPenalties()">패널티 전체 초기화</button><p id="penaltySaveNotice" role="status"></p></section></div>
- <footer class="prep-bottom"><div class="prep-bottom-head"><strong id="prepScoreMultiplier">최종 점수 ×1.00</strong><div class="prep-actions"><button id="backToMainFromStart" type="button" onclick="cancelGameStart()" style="background:#263b54;color:#dce8f5">메인메뉴</button><button id="confirmStartStats" type="button" onclick="confirmStartStats()">전투 시작</button></div></div><p id="penaltySummary"></p></footer></div>
+ <footer class="prep-bottom"><div class="prep-bottom-head"><strong id="prepScoreMultiplier">최종 점수 ×1.00</strong><div class="prep-actions"><button id="backToMainFromStart" type="button" onclick="cancelGameStart()" style="background:#263b54;color:#dce8f5">메인메뉴</button><button id="confirmStartStats" type="button" onclick="confirmStartStats()">전투 시작</button></div></div><p id="penaltySummary"></p><p id="challengeRefreshNotice" role="status" aria-live="polite" hidden></p></footer></div>
 </div>
 <div id="upgrade">
   <div class="panel">
@@ -1521,6 +1521,43 @@ function buyMetaUpgrade(key){
  if(level>=item.max||next.coins<cost)return;next.coins-=cost;next.levels[key]++;commitMetaAccount(next);renderMetaShop();
 }
 function awardMetaCoins(score,modules=0,bonus=0){const amount=Math.floor(Math.max(0,score)/100)+Math.max(0,Math.floor(bonus)),next=freshMetaAccount();dailyApply(next,'play',1);dailyApply(next,'survive',Math.floor(elapsed));next.coins+=amount;next.gear.modules+=modules;playerApplyScore(next,score);return commitMetaAccount(next)?amount:0;}
+// Only the allowed challenge preparation choices survive a reload in this tab.
+const CHALLENGE_PREP_KEY='nabeen.challengePreparation.v1';
+let challengePrepStorageOK=true,challengePrepWasRestored=false;
+function validateChallengeAllocation(raw){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
+ const out={};let total=0;
+ for(const key of ['attack','speed','health','experience']){
+  const n=raw[key];if(!Number.isInteger(n)||n<0||n>START_STAT_CAP)return null;out[key]=n;total+=n;
+ }
+ return total<=START_STAT_POINTS?out:null;
+}
+function clearChallengePreparation(){
+ challengePrepWasRestored=false;
+ try{sessionStorage.removeItem(CHALLENGE_PREP_KEY);challengePrepStorageOK=true;}
+ catch{challengePrepStorageOK=false;}
+}
+function saveChallengePreparation(){
+ if(!startStatsOpen)return;
+ if(selectedGameMode!=='challenge'){clearChallengePreparation();return;}
+ const allocation=validateChallengeAllocation(startAllocation);if(!allocation)return;
+ try{sessionStorage.setItem(CHALLENGE_PREP_KEY,JSON.stringify({version:1,mode:'challenge',allocation}));challengePrepStorageOK=true;}
+ catch{challengePrepStorageOK=false;}
+}
+function renderChallengeRefreshNotice(){
+ const node=document.getElementById('challengeRefreshNotice');node.hidden=selectedGameMode!=='challenge';
+ node.textContent=selectedGameMode!=='challenge'?'':!challengePrepStorageOK?'준비 설정을 저장하지 못했습니다. 이 브라우저에서는 새로고침 후 자동 복원이 제한됩니다.':challengePrepWasRestored?'새로고침 후 챌린지 준비를 복원했습니다. 배분을 확인한 뒤 챌린지 시작을 누르세요.':'이 탭에서 새로고침하면 챌린지 모드와 시작 스탯 배분만 복원됩니다. 전투는 자동 시작되지 않습니다.';
+}
+function restoreChallengePreparation(){
+ let saved;
+ try{const raw=sessionStorage.getItem(CHALLENGE_PREP_KEY);if(raw===null)return false;saved=JSON.parse(raw);}
+ catch{challengePrepStorageOK=false;return false;}
+ const allocation=validateChallengeAllocation(saved?.allocation);
+ if(saved?.version!==1||saved?.mode!=='challenge'||!allocation){clearChallengePreparation();return false;}
+ selectedGameMode='challenge';startGame();startAllocation=allocation;challengePrepWasRestored=true;
+ renderStartStats();return true;
+}
+
 function resetStartAllocation(){startAllocation={attack:0,speed:0,health:0,experience:0};}
 function startPointsLeft(){return START_STAT_POINTS-Object.values(startAllocation).reduce((a,b)=>a+b,0);}
 function changeStartStat(key,delta){
@@ -1545,7 +1582,7 @@ function renderStartStats(){
  document.getElementById('startStatsPreview').textContent=`무기 피해 +${(((1+startAllocation.attack*.04)*(1+perm.attack*.01)*(1+(food.damage||0))*(1+gearPreview.attack)-1)*100).toFixed(1)}% · 이동속도 ${(205*(1+startAllocation.speed*.03+perm.speed*.01+(food.speed||0)+gearPreview.speed)).toFixed(2)} · 최대 체력 ${(40*(1+startAllocation.health*.08+perm.health*.02+(food.health||0)+gearPreview.health)).toFixed(2)} · 경험치 +${(((1+startAllocation.experience*.04)*(1+perm.experience*.01)*(1+(food.xp||0))*(1+gearPreview.experience)-1)*100).toFixed(1)}% (${challenge?'챌린지: 영구 강화·음식 제외':'영구 강화·음식 포함'})`;
  document.getElementById('confirmStartStats').disabled=startPointsLeft()!==0;
  document.getElementById('confirmStartStats').textContent=challenge?'챌린지 시작':'전투 시작';
- renderPenaltySetup();
+ renderPenaltySetup();saveChallengePreparation();renderChallengeRefreshNotice();
 }
 function setGameMode(mode){if(!startStatsOpen||!['normal','challenge'].includes(mode))return;selectedGameMode=mode;renderStartStats();}
 function startGame(){
@@ -1557,13 +1594,17 @@ function startGame(){
 }
 function cancelGameStart(){
  if(!startStatsOpen||running)return;
+ clearChallengePreparation();
  startStatsOpen=false;resetStartAllocation();
  document.getElementById('startStats').style.display='none';
  for(const key of Object.keys(keys))keys[key]=false;
  resetJoystick();showLobby();
 }
 function confirmStartStats(){
- if(!startStatsOpen||startPointsLeft()!==0)return;
+ if(!startStatsOpen||startPointsLeft()!==0||!['normal','challenge'].includes(selectedGameMode))return;
+ const validAllocation=validateChallengeAllocation(startAllocation);
+ if(!validAllocation||Object.values(validAllocation).reduce((sum,n)=>sum+n,0)!==START_STAT_POINTS)return;
+ startAllocation=validAllocation;saveChallengePreparation();
  currentGameMode=selectedGameMode;
  if(!prepareMealForRun())return;
  currentPenalties=currentGameMode==='challenge'?emptyRunPenalties():readRunPenalties(selectedPenalties);
@@ -4324,6 +4365,7 @@ let lobbyShown=false,lobbyPanel=null;
 function leaveLobby(){closeArcade();closeDonation();closeDailyShop();closeMarketPaper();lobbyShown=false;document.body.classList.remove('lobby-active');document.getElementById('centerMsg').classList.remove('lobby-screen');}
 function showLobby(){
  if(running||startStatsOpen)return;
+ clearChallengePreparation();
  closeExchange();closeMetaShop();closeKitchen();closeLobbyPanels();resetJoystick();
  const center=document.getElementById('centerMsg');center.innerHTML=LOBBY_TEMPLATE;center.style.display='flex';center.classList.add('lobby-screen');
  document.body.classList.add('lobby-active');lobbyShown=true;document.getElementById('startBtn').onclick=startGame;
@@ -4352,7 +4394,8 @@ setInterval(renderLobbyStatus,1000);
 dailyShopDeliver();
 initializePlayerProgress();
 initializeGearTraits();
-showLobby();
+applyLobbyTheme();
+if(!restoreChallengePreparation())showLobby();
 
 
 // Embedded font also refreshes the chart if it was opened during font loading.

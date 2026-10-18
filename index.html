@@ -1718,14 +1718,20 @@ function resetGemState(){
 }
 // World geometry only: combat stats, rewards, and spawn intervals are unchanged.
 const INDOOR_ROOM={left:-2100,right:2100,top:-1400,bottom:1400,wall:48};
-// Six isolated short partitions are staggered to avoid enclosed corner positions.
+// Each staggered wall has a 240-unit middle passage, including horizontal and vertical walls.
 const ROOM_PARTITIONS=[
- {left:-1440,right:-840,top:-770,bottom:-722},
- {left:380,right:980,top:-668,bottom:-620},
- {left:-980,right:-380,top:620,bottom:668},
- {left:840,right:1440,top:722,bottom:770},
- {left:-1544,right:-1496,top:-300,bottom:300},
- {left:1496,right:1544,top:-300,bottom:300}
+ {left:-1440,right:-1260,top:-770,bottom:-722},
+ {left:-1020,right:-840,top:-770,bottom:-722},
+ {left:380,right:560,top:-668,bottom:-620},
+ {left:800,right:980,top:-668,bottom:-620},
+ {left:-980,right:-800,top:620,bottom:668},
+ {left:-560,right:-380,top:620,bottom:668},
+ {left:840,right:1020,top:722,bottom:770},
+ {left:1260,right:1440,top:722,bottom:770},
+ {left:-1544,right:-1496,top:-300,bottom:-120},
+ {left:-1544,right:-1496,top:120,bottom:300},
+ {left:1496,right:1544,top:-300,bottom:-120},
+ {left:1496,right:1544,top:120,bottom:300}
 ];
 function roomContains(x,y,r=0){
  const a=INDOOR_ROOM;if(x-r<a.left-1e-6||x+r>a.right+1e-6||y-r<a.top-1e-6||y+r>a.bottom+1e-6)return false;
@@ -2873,10 +2879,10 @@ function update(dt){
   elapsed<180 ? 4 :
   elapsed<300 ? 5 :
   elapsed<530 ? 6 :
-  elapsed<700 ? 7 :
-  elapsed<950 ? 8 :
-  elapsed<1150 ? 9 :
-  10;;
+  elapsed<700 ? 9 :
+  elapsed<950 ? 10 :
+  elapsed<1150 ? 11 :
+  12;;
     const eventCountMultiplier=randomEvent.active&&randomEvent.type==="raid"?2:1;
     for(let i=0;i<count*eventCountMultiplier && enemies.length<600;i++)spawnEnemy();
   }

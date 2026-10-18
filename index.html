@@ -1716,8 +1716,159 @@ function resetGemState(){
   magnetItems=[];
   magnetEffect={active:false,time:0,duration:.85,gems:[],gained:0};
 }
+// World geometry only: combat stats, rewards, and spawn intervals are unchanged.
+const INDOOR_ROOM={left:-2100,right:2100,top:-1400,bottom:1400,wall:48};
+// Six isolated short partitions are staggered to avoid enclosed corner positions.
+const ROOM_PARTITIONS=[
+ {left:-1440,right:-840,top:-770,bottom:-722},
+ {left:380,right:980,top:-668,bottom:-620},
+ {left:-980,right:-380,top:620,bottom:668},
+ {left:840,right:1440,top:722,bottom:770},
+ {left:-1544,right:-1496,top:-300,bottom:300},
+ {left:1496,right:1544,top:-300,bottom:300}
+];
+function roomContains(x,y,r=0){
+ const a=INDOOR_ROOM;if(x-r<a.left-1e-6||x+r>a.right+1e-6||y-r<a.top-1e-6||y+r>a.bottom+1e-6)return false;
+ for(const w of ROOM_PARTITIONS)if(x>w.left-r+1e-6&&x<w.right+r-1e-6&&y>w.top-r+1e-6&&y<w.bottom+r-1e-6)return false;return true;
+}
+function roomClampCircle(body){
+ const a=INDOOR_ROOM,r=Math.max(0,body.r||0),ox=body.x,oy=body.y;
+ body.x=Math.max(a.left+r,Math.min(a.right-r,body.x));body.y=Math.max(a.top+r,Math.min(a.bottom-r,body.y));
+ for(let pass=0;pass<8&&!roomContains(body.x,body.y,r);pass++)for(const w of ROOM_PARTITIONS){
+  if(body.x<=w.left-r||body.x>=w.right+r||body.y<=w.top-r||body.y>=w.bottom+r)continue;
+  const moves=[{x:w.left-r,y:body.y},{x:w.right+r,y:body.y},{x:body.x,y:w.top-r},{x:body.x,y:w.bottom+r}];
+  moves.sort((p,q)=>Math.hypot(p.x-body.x,p.y-body.y)-Math.hypot(q.x-body.x,q.y-body.y));Object.assign(body,moves[0]);
+ }
+ if(!roomContains(body.x,body.y,r)){
+  const points=ROOM_PARTITIONS.flatMap(w=>[{x:w.left-r,y:w.top-r},{x:w.right+r,y:w.top-r},{x:w.left-r,y:w.bottom+r},{x:w.right+r,y:w.bottom+r}]).filter(p=>roomContains(p.x,p.y,r));
+  points.sort((p,q)=>Math.hypot(p.x-ox,p.y-oy)-Math.hypot(q.x-ox,q.y-oy));if(points[0])Object.assign(body,points[0]);
+ }
+ return body;
+}
+// Axis sweeps let actors slide along walls without tunneling at high speeds.
+function roomMoveBody(body,dx,dy){
+ roomClampCircle(body);const a=INDOOR_ROOM,r=body.r||0,x=body.x,y=body.y;
+ let nx=Math.max(a.left+r,Math.min(a.right-r,x+dx));
+ for(const w of ROOM_PARTITIONS)if(y>w.top-r+1e-6&&y<w.bottom+r-1e-6){if(dx>0&&x<=w.left-r+1e-6&&nx>w.left-r)nx=Math.min(nx,w.left-r);if(dx<0&&x>=w.right+r-1e-6&&nx<w.right+r)nx=Math.max(nx,w.right+r);}
+ body.x=nx;let ny=Math.max(a.top+r,Math.min(a.bottom-r,y+dy));
+ for(const w of ROOM_PARTITIONS)if(nx>w.left-r+1e-6&&nx<w.right+r-1e-6){if(dy>0&&y<=w.top-r+1e-6&&ny>w.top-r)ny=Math.min(ny,w.top-r);if(dy<0&&y>=w.bottom+r-1e-6&&ny<w.bottom+r)ny=Math.max(ny,w.bottom+r);}
+ body.y=ny;return body;
+}
+function roomSegmentBox(x,y,toX,toY,w,r=0){
+ const l=w.left-r,right=w.right+r,top=w.top-r,bottom=w.bottom+r;
+ if(Math.max(x,toX)<l||Math.min(x,toX)>right||Math.max(y,toY)<top||Math.min(y,toY)>bottom)return null;
+ let enter=0,exit=1;const dx=toX-x,dy=toY-y;
+ if(Math.abs(dx)<1e-10){if(x<l||x>right)return null;}else{let v1=(l-x)/dx,v2=(right-x)/dx;if(v1>v2){const tmp=v1;v1=v2;v2=tmp;}enter=Math.max(enter,v1);exit=Math.min(exit,v2);if(enter>exit)return null;}
+ if(Math.abs(dy)<1e-10){if(y<top||y>bottom)return null;}else{let v1=(top-y)/dy,v2=(bottom-y)/dy;if(v1>v2){const tmp=v1;v1=v2;v2=tmp;}enter=Math.max(enter,v1);exit=Math.min(exit,v2);if(enter>exit)return null;}
+ return exit>1e-8&&enter<=1?Math.max(0,enter):null;
+}
+function roomLineClear(x,y,toX,toY,r=0){
+ const a=INDOOR_ROOM;if(Math.min(x,toX)-r<a.left-1e-6||Math.max(x,toX)+r>a.right+1e-6||Math.min(y,toY)-r<a.top-1e-6||Math.max(y,toY)+r>a.bottom+1e-6)return false;
+ for(const w of ROOM_PARTITIONS)if(roomSegmentBox(x,y,toX,toY,w,Math.max(0,r-.001))!==null)return false;return true;
+}
+function roomProjectileHit(projectile,fromX,fromY){
+ const a=INDOOR_ROOM,r=projectile.r||0,dx=projectile.x-fromX,dy=projectile.y-fromY;let t=Infinity;
+ if(fromX-r<a.left||fromX+r>a.right||fromY-r<a.top||fromY+r>a.bottom)t=0;
+ if(dx>0&&projectile.x+r>=a.right)t=Math.min(t,(a.right-r-fromX)/dx);
+ if(dx<0&&projectile.x-r<=a.left)t=Math.min(t,(a.left+r-fromX)/dx);
+ if(dy>0&&projectile.y+r>=a.bottom)t=Math.min(t,(a.bottom-r-fromY)/dy);
+ if(dy<0&&projectile.y-r<=a.top)t=Math.min(t,(a.top+r-fromY)/dy);
+ for(const w of ROOM_PARTITIONS){const hit=roomSegmentBox(fromX,fromY,projectile.x,projectile.y,w,r);if(hit!==null)t=Math.min(t,hit);}
+ if(t===Infinity)return false;t=Math.max(0,Math.min(1,t));projectile.x=fromX+dx*t;projectile.y=fromY+dy*t;roomClampCircle(projectile);
+ if(projectile.kind==='boomerang'){projectile.returning=true;const angle=roomChaseAngle(projectile);projectile.vx=Math.cos(angle)*projectile.returnSpeed;projectile.vy=Math.sin(angle)*projectile.returnSpeed;}
+ return true;
+}
+function drawRoomPartitions(sx,sy){
+ ctx.save();for(const w of ROOM_PARTITIONS){
+  const x=sx(w.left),y=sy(w.top),width=w.right-w.left,height=w.bottom-w.top;
+  if(x>W+20||y>H+20||x+width< -20||y+height< -20)continue;
+  ctx.fillStyle='#070e1755';ctx.fillRect(x+8,y+10,width,height);ctx.fillStyle='#344956';ctx.fillRect(x,y,width,height);
+  ctx.strokeStyle='#8a9e9e';ctx.lineWidth=2;ctx.strokeRect(x,y,width,height);ctx.fillStyle='#506772';ctx.fillRect(x+3,y+3,width-6,6);
+  ctx.fillStyle='#c3b17a99';if(width>height){for(let p=22;p<width-30;p+=130)ctx.fillRect(x+p,y+height-9,48,5);}else{for(let p=25;p<height-30;p+=130)ctx.fillRect(x+width-9,y+p,5,48);}
+ }ctx.restore();
+}
+
+// Two shared flow fields serve ordinary enemies and bosses; never run A* per enemy.
+const ROOM_NAV_CELL=64;let roomNavFields=new Map();
+function roomNavigationField(radius){
+ const key=radius>28?68:22,a=INDOOR_ROOM,cell=ROOM_NAV_CELL,cols=Math.ceil((a.right-a.left)/cell),rows=Math.ceil((a.bottom-a.top)/cell),count=cols*rows;
+ let field=roomNavFields.get(key);
+ if(!field){
+  const open=new Uint8Array(count);for(let i=0;i<count;i++)open[i]=roomContains(a.left+(i%cols+.5)*cell,a.top+(Math.floor(i/cols)+.5)*cell,key)?1:0;
+  field={open,dist:new Int16Array(count),cols,rows,cell,radius:key,time:-Infinity,goalX:NaN,goalY:NaN};roomNavFields.set(key,field);
+ }
+ const moved=Math.hypot(player.x-field.goalX,player.y-field.goalY);if(moved<1||(Math.abs(elapsed-field.time)<.25&&moved<cell*.7))return field;
+ field.time=elapsed;field.goalX=player.x;field.goalY=player.y;field.dist.fill(-1);
+ let goal=-1,best=Infinity;
+ for(let i=0;i<count;i++)if(field.open[i]){const x=a.left+(i%cols+.5)*cell,y=a.top+(Math.floor(i/cols)+.5)*cell,d=(x-player.x)**2+(y-player.y)**2;if(d<best&&roomLineClear(player.x,player.y,x,y,0)){best=d;goal=i;}}
+ if(goal<0)return field;
+ const queue=new Int32Array(count);let head=0,tail=0;queue[tail++]=goal;field.dist[goal]=0;
+ while(head<tail){const i=queue[head++],x=i%cols,y=Math.floor(i/cols);for(const j of [x>0?i-1:-1,x+1<cols?i+1:-1,y>0?i-cols:-1,y+1<rows?i+cols:-1])if(j>=0&&field.open[j]&&field.dist[j]<0){
+  const px=a.left+(x+.5)*cell,py=a.top+(y+.5)*cell,qx=a.left+(j%cols+.5)*cell,qy=a.top+(Math.floor(j/cols)+.5)*cell;
+  if(!roomLineClear(px,py,qx,qy,key))continue;field.dist[j]=field.dist[i]+1;queue[tail++]=j;
+ }}return field;
+}
+function roomChaseAngle(body){
+ const r=body.r||0;if(roomLineClear(body.x,body.y,player.x,player.y,r))return Math.atan2(player.y-body.y,player.x-body.x);
+ const cached=body._roomTarget;if(cached&&elapsed<cached.until&&Math.hypot(cached.x-body.x,cached.y-body.y)>Math.max(12,(body.speed||0)/30)&&roomLineClear(body.x,body.y,cached.x,cached.y,r))return Math.atan2(cached.y-body.y,cached.x-body.x);
+ const f=roomNavigationField(r),a=INDOOR_ROOM,cell=f.cell,cx=Math.floor((body.x-a.left)/cell),cy=Math.floor((body.y-a.top)/cell);let target=null,best=Infinity;
+ // Nearby reachable centers avoid corner cutting and also recover off-grid actors.
+ for(let ring=1;ring<=3&&!target;ring++)for(let y=Math.max(0,cy-ring);y<=Math.min(f.rows-1,cy+ring);y++)for(let x=Math.max(0,cx-ring);x<=Math.min(f.cols-1,cx+ring);x++){
+  const i=y*f.cols+x;if(f.dist[i]<0)continue;const px=a.left+(x+.5)*cell,py=a.top+(y+.5)*cell,d=Math.hypot(px-body.x,py-body.y);
+  if(d<4||!roomLineClear(body.x,body.y,px,py,r))continue;const score=f.dist[i]*cell+d;
+  if(score<best){best=score;target={x:px,y:py};}
+ }
+ if(target){body._roomTarget={...target,until:elapsed+.18};return Math.atan2(target.y-body.y,target.x-body.x);}
+ return Math.atan2(player.y-body.y,player.x-body.x);
+}
+
+function roomClampCamera(){const a=INDOOR_ROOM,pad=a.wall+12;cameraX=Math.max(a.left-pad,Math.min(a.right+pad-W,cameraX));cameraY=Math.max(a.top-pad,Math.min(a.bottom+pad-H,cameraY));}
+function roomOffscreen(body){return body.x+body.r<cameraX-30||body.x-body.r>cameraX+W+30||body.y+body.r<cameraY-30||body.y-body.r>cameraY+H+30;}
+function roomPlaceEnemy(body){
+ if(roomContains(body.x,body.y,body.r)&&roomOffscreen(body))return body;
+ const min=Math.max(W,H)*.62,max=Math.max(W,H)*.82;
+ for(let i=0;i<40;i++){
+  const angle=Math.random()*Math.PI*2,d=min+Math.random()*(max-min),x=player.x+Math.cos(angle)*d,y=player.y+Math.sin(angle)*d;
+  if(roomContains(x,y,body.r)&&roomOffscreen({x,y,r:body.r})){body.x=x;body.y=y;return body;}
+ }
+ // A bounded fallback avoids edge clumping and spawning on the player.
+ const a=INDOOR_ROOM,r=body.r+24,points=[{x:a.left+r,y:a.top+r},{x:a.right-r,y:a.top+r},{x:a.left+r,y:a.bottom-r},{x:a.right-r,y:a.bottom-r}];
+ points.sort((p,q)=>Math.hypot(q.x-player.x,q.y-player.y)-Math.hypot(p.x-player.x,p.y-player.y));Object.assign(body,points[0]);return body;
+}
+function roomPlaceNear(body,origin,distance){
+ if(roomContains(body.x,body.y,body.r))return body;
+ const base=Math.atan2(body.y-origin.y,body.x-origin.x);
+ for(let i=1;i<=24;i++){
+  const a=base+i*Math.PI/12,x=origin.x+Math.cos(a)*distance,y=origin.y+Math.sin(a)*distance;
+  if(roomContains(x,y,body.r)){body.x=x;body.y=y;return body;}
+ }
+ return roomClampCircle(body);
+}
+function drawIndoorRoom(sx,sy){
+ const a=INDOOR_ROOM,l=sx(a.left),t=sy(a.top),w=a.right-a.left,h=a.bottom-a.top,wall=a.wall;
+ ctx.save();ctx.fillStyle='#080e18';ctx.fillRect(0,0,W,H);
+ ctx.fillStyle='#182735';ctx.fillRect(l,t,w,h);
+ ctx.save();ctx.beginPath();ctx.rect(l,t,w,h);ctx.clip();
+ const tile=96,startX=Math.max(a.left,Math.floor(cameraX/tile)*tile),startY=Math.max(a.top,Math.floor(cameraY/tile)*tile);
+ ctx.lineWidth=1;ctx.strokeStyle='#2c404b';
+ for(let x=startX;x<=Math.min(a.right,cameraX+W+tile);x+=tile){ctx.beginPath();ctx.moveTo(sx(x),t);ctx.lineTo(sx(x),t+h);ctx.stroke();}
+ for(let y=startY;y<=Math.min(a.bottom,cameraY+H+tile);y+=tile){ctx.beginPath();ctx.moveTo(l,sy(y));ctx.lineTo(l+w,sy(y));ctx.stroke();}
+ // Broad floor markings keep the room recognizable away from the outer walls.
+ ctx.strokeStyle='#66827c30';ctx.lineWidth=4;ctx.strokeRect(sx(-1700),sy(-1000),3400,2000);ctx.strokeRect(sx(-280),sy(-180),560,360);
+ ctx.fillStyle='#8eaaa542';ctx.textAlign='center';ctx.font='bold 38px "NPS Game",sans-serif';ctx.fillText('NABEEN SURVIVAL',sx(0),sy(-28));ctx.font='15px "NPS Game",sans-serif';
+ // A repeated painted strip suggests indoor aisles without adding obstacles.
+ ctx.fillStyle='#56716c27';for(let y=-840;y<=840;y+=420){for(let x=-1470;x<=1470;x+=420)ctx.fillRect(sx(x)-35,sy(y)-3,70,6);}
+ ctx.restore();
+ // Outer walls are drawn before weapons so beams and area effects stay visible across them.
+ ctx.fillStyle='#31434f';ctx.fillRect(l-wall,t-wall,w+wall*2,wall);ctx.fillRect(l-wall,t+h,w+wall*2,wall);ctx.fillRect(l-wall,t,wall,h);ctx.fillRect(l+w,t,wall,h);
+ ctx.strokeStyle='#859b9b';ctx.lineWidth=3;ctx.strokeRect(l,t,w,h);
+ ctx.strokeStyle='#0b111b';ctx.lineWidth=7;ctx.strokeRect(l-wall,t-wall,w+wall*2,h+wall*2);
+ ctx.fillStyle='#d6bd7577';for(let x=a.left+80;x<a.right;x+=240){ctx.fillRect(sx(x),t-9,75,6);ctx.fillRect(sx(x),t+h+3,75,6);}for(let y=a.top+80;y<a.bottom;y+=240){ctx.fillRect(l-9,sy(y),6,75);ctx.fillRect(l+w+3,sy(y),6,75);}
+ ctx.restore();
+}
+
 function beginGame(){
-  leaveLobby();
+  leaveLobby();roomNavFields.clear();
   renderMealHud();
   resetJoystick();
   damageNumbers=[];damageNumberSerial=0;
@@ -1754,7 +1905,7 @@ function beginGame(){
   };
   player.speed+=startBonuses.speed;player.maxHp+=startBonuses.health;player.hp=player.maxHp;
   cameraX=player.x-W/2;
-  cameraY=player.y-H/2;
+  cameraY=player.y-H/2;roomClampCamera();
   document.getElementById("centerMsg").style.display="none";
   document.getElementById("upgrade").style.display="none";
   last=performance.now(); requestAnimationFrame(loop);
@@ -1936,7 +2087,7 @@ function spawnBoss(){
     r:64, hp, maxHp:hp, speed:90+Math.min(level*0.8,28), damage:900,
     boss:true, defeated:false, attackTimer:2.5, waveTimer:4.5, phase:1, hitFlash:0
   };
-  applyEnemyDifficulty(boss);enemies.push(boss);
+  roomPlaceNear(boss,player,dist);applyEnemyDifficulty(boss);enemies.push(boss);
   document.getElementById("bossHud").style.display="block";
   document.getElementById("bossName").textContent="👹 대왕 나룡이";
   showMessage("⚠️ 보스 등장! 나룡이가 나타났습니다!");
@@ -1964,7 +2115,7 @@ function bossSummon(){
   for(let i=0;i<4 && enemies.length<500;i++){
     const a=Math.random()*Math.PI*2, d=100+Math.random()*140;
     const x=boss.x+Math.cos(a)*d, y=boss.y+Math.sin(a)*d;
-    enemies.push(applyEnemyDifficulty({x,y,r:12,hp:90+level*30,maxHp:90+level*30,speed:72+level,damage:650,elite:true}));
+    enemies.push(applyEnemyDifficulty(roomPlaceNear({x,y,r:12,hp:90+level*30,maxHp:90+level*30,speed:72+level,damage:650,elite:true},boss,d)));
   }
   showMessage("👹 보스가 부하를 소환했습니다!");
 }
@@ -2025,7 +2176,7 @@ function spawnEnemy(){
     // 5분 생존 후부터 기존 일반 적 일부가 분열형 적으로 등장한다.
     if(elapsed>=300 && Math.random()<.10)e.splitter=true;
   }
-  enemies.push(applyEnemyDifficulty(e));
+  roomPlaceEnemy(e);enemies.push(applyEnemyDifficulty(e));
 }
 
 function nearestEnemies(count, range){
@@ -2124,8 +2275,7 @@ function shootWeaponBase(w){
         const nx=d>0?dx/d:1;
         const ny=d>0?dy/d:0;
 
-        e.x+=nx*knockback;
-        e.y+=ny*knockback;
+        roomMoveBody(e,nx*knockback,ny*knockback);
       }
 
       for(let j=0;j<4;j++){
@@ -2464,7 +2614,7 @@ function spawnSplitOffspring(parent){
       speed:parent.speed*1.12,damage:parent.damage*.7,
       elite:false,splitChild:true
     };
-    enemies.push(child);
+    roomClampCircle(child);enemies.push(child);
     for(let i=0;i<5;i++)particles.push({x:child.x,y:child.y,vx:(Math.random()-.5)*150,vy:(Math.random()-.5)*150,life:.35});
   }
 }
@@ -2635,10 +2785,10 @@ function update(dt){
   if(dx||dy){
     const l=Math.hypot(dx,dy);
     dx/=l; dy/=l;
-    player.x+=dx*player.speed*sponsorMultiplier('speed')*dt;
-    player.y+=dy*player.speed*sponsorMultiplier('speed')*dt;
+    roomMoveBody(player,dx*player.speed*sponsorMultiplier('speed')*dt,dy*player.speed*sponsorMultiplier('speed')*dt);
   }
 
+  roomClampCircle(player);
   // 카메라는 플레이어가 화면 가장자리에 가까워질 때만 따라온다.
   // 따라서 플레이어가 이동하는 모습이 화면에 직접 보인다.
   const marginX=W*0.28, marginY=H*0.28;
@@ -2647,6 +2797,7 @@ function update(dt){
   if(sx>W-marginX) cameraX=player.x-(W-marginX);
   if(sy<marginY) cameraY=player.y-marginY;
   if(sy>H-marginY) cameraY=player.y-(H-marginY);
+  roomClampCamera();
 
   if(elapsed>=nextBossTime){
     spawnBoss();
@@ -2680,8 +2831,7 @@ function update(dt){
             const nx=d>0?dx/d:1;
             const ny=d>0?dy/d:0;
             const strength=bh.pull*(1-d/Math.max(1,bh.r));
-            e.x+=nx*strength*.35;
-            e.y+=ny*strength*.35;
+            roomMoveBody(e,nx*strength*.35,ny*strength*.35);
           }
         }
       }
@@ -2696,8 +2846,7 @@ function update(dt){
         const nx=dx/d;
         const ny=dy/d;
         const strength=bh.pull*(1-d/Math.max(1,bh.r));
-        e.x+=nx*strength*dt;
-        e.y+=ny*strength*dt;
+        roomMoveBody(e,nx*strength*dt,ny*strength*dt);
       }
     }
 
@@ -2736,12 +2885,11 @@ function update(dt){
 
   const slowingAura=weapons.find(w=>w.type==='shockwave'&&w.branch==='alt'&&w.level>0);
   for(const e of enemies){
-    const a=Math.atan2(player.y-e.y,player.x-e.x);
+    const a=roomChaseAngle(e);
     // 보스도 적 배열에 들어가지만, 일반 적보다 확실히 빠르게 추격한다.
     const eventSpeedMultiplier=randomEvent.active&&randomEvent.type==="berserk"?1.35:1;
     const moveSpeed=(e.boss ? e.speed*(e.phase===2?1.18:1) : e.speed)*eventSpeedMultiplier*penaltyMultiplier('speed')*shockwaveAuraSpeedMultiplier(e,slowingAura);
-    e.x+=Math.cos(a)*moveSpeed*dt;
-    e.y+=Math.sin(a)*moveSpeed*dt;
+    roomMoveBody(e,Math.cos(a)*moveSpeed*dt,Math.sin(a)*moveSpeed*dt);
     if(Math.hypot(player.x-e.x,player.y-e.y)<player.r+e.r){
       hurtPlayer(e.damage*dt);
       if(!running)return;
@@ -2759,7 +2907,7 @@ function update(dt){
     }
 
     if(b.returning){
-      const a=Math.atan2(player.y-b.y,player.x-b.x);
+      const a=roomChaseAngle(b);
       b.vx=Math.cos(a)*b.returnSpeed;
       b.vy=Math.sin(a)*b.returnSpeed;
       if(Math.hypot(player.x-b.x,player.y-b.y)<player.r+14){
@@ -2770,13 +2918,14 @@ function update(dt){
 
   for(let i=bullets.length-1;i>=0;i--){
     const b=bullets[i];
+    const previousX=b.x,previousY=b.y;
     if(b.kind==="boomerang"){
       b.life-=dt;
       if(!b.returning){
         b.x+=b.vx*dt;
         b.y+=b.vy*dt;
       }else{
-        const a=Math.atan2(player.y-b.y,player.x-b.x);
+        const a=roomChaseAngle(b);
         b.vx=Math.cos(a)*b.returnSpeed;
         b.vy=Math.sin(a)*b.returnSpeed;
         b.x+=b.vx*dt;
@@ -2788,6 +2937,10 @@ function update(dt){
       b.life-=dt;
     }
 
+    // Swept wall contact is resolved before enemy hits, splash, or burning zones.
+    if(roomProjectileHit(b,previousX,previousY)&&b.kind!=="boomerang"){
+      bullets.splice(i,1);continue;
+    }
     let remove=b.life<=0 ||
       Math.hypot(b.x-player.x,b.y-player.y)>player.range+180;
 
@@ -2940,18 +3093,7 @@ function draw(){
   const sx=x=>x-cameraX;
   const sy=y=>y-cameraY;
 
-  // 이동하는 월드 그리드
-  ctx.strokeStyle="#1c293c";ctx.lineWidth=1;
-  const size=48;
-  let ox=(((-cameraX)%size)+size)%size;
-  let oy=(((-cameraY)%size)+size)%size;
-  for(let x=ox;x<W;x+=size){
-    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
-  }
-  for(let y=oy;y<H;y+=size){
-    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
-  }
-
+  drawIndoorRoom(sx,sy);drawRoomPartitions(sx,sy);
 
   drawBranchEffects(sx,sy);
   drawEvolutionVfx(sx,sy);

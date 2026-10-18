@@ -1717,7 +1717,8 @@ function resetGemState(){
   magnetEffect={active:false,time:0,duration:.85,gems:[],gained:0};
 }
 // World geometry only: combat stats, rewards, and spawn intervals are unchanged.
-const INDOOR_ROOM={left:-2100,right:2100,top:-1400,bottom:1400,wall:48};
+// This bounds only the shared pathfinding grid, never movement or spawning.
+const ROOM_NAV_BOUNDS={left:-2100,right:2100,top:-1400,bottom:1400};
 // Each staggered wall has a 240-unit middle passage, including horizontal and vertical walls.
 const ROOM_PARTITIONS=[
  {left:-1440,right:-1260,top:-770,bottom:-722},
@@ -1734,12 +1735,11 @@ const ROOM_PARTITIONS=[
  {left:1496,right:1544,top:120,bottom:300}
 ];
 function roomContains(x,y,r=0){
- const a=INDOOR_ROOM;if(x-r<a.left-1e-6||x+r>a.right+1e-6||y-r<a.top-1e-6||y+r>a.bottom+1e-6)return false;
+ if(!Number.isFinite(x)||!Number.isFinite(y))return false;
  for(const w of ROOM_PARTITIONS)if(x>w.left-r+1e-6&&x<w.right+r-1e-6&&y>w.top-r+1e-6&&y<w.bottom+r-1e-6)return false;return true;
 }
 function roomClampCircle(body){
- const a=INDOOR_ROOM,r=Math.max(0,body.r||0),ox=body.x,oy=body.y;
- body.x=Math.max(a.left+r,Math.min(a.right-r,body.x));body.y=Math.max(a.top+r,Math.min(a.bottom-r,body.y));
+ const r=Math.max(0,body.r||0),ox=body.x,oy=body.y;
  for(let pass=0;pass<8&&!roomContains(body.x,body.y,r);pass++)for(const w of ROOM_PARTITIONS){
   if(body.x<=w.left-r||body.x>=w.right+r||body.y<=w.top-r||body.y>=w.bottom+r)continue;
   const moves=[{x:w.left-r,y:body.y},{x:w.right+r,y:body.y},{x:body.x,y:w.top-r},{x:body.x,y:w.bottom+r}];
@@ -1753,10 +1753,10 @@ function roomClampCircle(body){
 }
 // Axis sweeps let actors slide along walls without tunneling at high speeds.
 function roomMoveBody(body,dx,dy){
- roomClampCircle(body);const a=INDOOR_ROOM,r=body.r||0,x=body.x,y=body.y;
- let nx=Math.max(a.left+r,Math.min(a.right-r,x+dx));
+ roomClampCircle(body);const r=body.r||0,x=body.x,y=body.y;
+ let nx=x+dx;
  for(const w of ROOM_PARTITIONS)if(y>w.top-r+1e-6&&y<w.bottom+r-1e-6){if(dx>0&&x<=w.left-r+1e-6&&nx>w.left-r)nx=Math.min(nx,w.left-r);if(dx<0&&x>=w.right+r-1e-6&&nx<w.right+r)nx=Math.max(nx,w.right+r);}
- body.x=nx;let ny=Math.max(a.top+r,Math.min(a.bottom-r,y+dy));
+ body.x=nx;let ny=y+dy;
  for(const w of ROOM_PARTITIONS)if(nx>w.left-r+1e-6&&nx<w.right+r-1e-6){if(dy>0&&y<=w.top-r+1e-6&&ny>w.top-r)ny=Math.min(ny,w.top-r);if(dy<0&&y>=w.bottom+r-1e-6&&ny<w.bottom+r)ny=Math.max(ny,w.bottom+r);}
  body.y=ny;return body;
 }
@@ -1769,16 +1769,11 @@ function roomSegmentBox(x,y,toX,toY,w,r=0){
  return exit>1e-8&&enter<=1?Math.max(0,enter):null;
 }
 function roomLineClear(x,y,toX,toY,r=0){
- const a=INDOOR_ROOM;if(Math.min(x,toX)-r<a.left-1e-6||Math.max(x,toX)+r>a.right+1e-6||Math.min(y,toY)-r<a.top-1e-6||Math.max(y,toY)+r>a.bottom+1e-6)return false;
+ if(!Number.isFinite(x+y+toX+toY))return false;
  for(const w of ROOM_PARTITIONS)if(roomSegmentBox(x,y,toX,toY,w,Math.max(0,r-.001))!==null)return false;return true;
 }
 function roomProjectileHit(projectile,fromX,fromY){
- const a=INDOOR_ROOM,r=projectile.r||0,dx=projectile.x-fromX,dy=projectile.y-fromY;let t=Infinity;
- if(fromX-r<a.left||fromX+r>a.right||fromY-r<a.top||fromY+r>a.bottom)t=0;
- if(dx>0&&projectile.x+r>=a.right)t=Math.min(t,(a.right-r-fromX)/dx);
- if(dx<0&&projectile.x-r<=a.left)t=Math.min(t,(a.left+r-fromX)/dx);
- if(dy>0&&projectile.y+r>=a.bottom)t=Math.min(t,(a.bottom-r-fromY)/dy);
- if(dy<0&&projectile.y-r<=a.top)t=Math.min(t,(a.top+r-fromY)/dy);
+ const r=projectile.r||0,dx=projectile.x-fromX,dy=projectile.y-fromY;let t=Infinity;
  for(const w of ROOM_PARTITIONS){const hit=roomSegmentBox(fromX,fromY,projectile.x,projectile.y,w,r);if(hit!==null)t=Math.min(t,hit);}
  if(t===Infinity)return false;t=Math.max(0,Math.min(1,t));projectile.x=fromX+dx*t;projectile.y=fromY+dy*t;roomClampCircle(projectile);
  if(projectile.kind==='boomerang'){projectile.returning=true;const angle=roomChaseAngle(projectile);projectile.vx=Math.cos(angle)*projectile.returnSpeed;projectile.vy=Math.sin(angle)*projectile.returnSpeed;}
@@ -1797,7 +1792,7 @@ function drawRoomPartitions(sx,sy){
 // Two shared flow fields serve ordinary enemies and bosses; never run A* per enemy.
 const ROOM_NAV_CELL=64;let roomNavFields=new Map();
 function roomNavigationField(radius){
- const key=radius>28?68:22,a=INDOOR_ROOM,cell=ROOM_NAV_CELL,cols=Math.ceil((a.right-a.left)/cell),rows=Math.ceil((a.bottom-a.top)/cell),count=cols*rows;
+ const key=radius>28?68:22,a=ROOM_NAV_BOUNDS,cell=ROOM_NAV_CELL,cols=Math.ceil((a.right-a.left)/cell),rows=Math.ceil((a.bottom-a.top)/cell),count=cols*rows;
  let field=roomNavFields.get(key);
  if(!field){
   const open=new Uint8Array(count);for(let i=0;i<count;i++)open[i]=roomContains(a.left+(i%cols+.5)*cell,a.top+(Math.floor(i/cols)+.5)*cell,key)?1:0;
@@ -1817,7 +1812,7 @@ function roomNavigationField(radius){
 function roomChaseAngle(body){
  const r=body.r||0;if(roomLineClear(body.x,body.y,player.x,player.y,r))return Math.atan2(player.y-body.y,player.x-body.x);
  const cached=body._roomTarget;if(cached&&elapsed<cached.until&&Math.hypot(cached.x-body.x,cached.y-body.y)>Math.max(12,(body.speed||0)/30)&&roomLineClear(body.x,body.y,cached.x,cached.y,r))return Math.atan2(cached.y-body.y,cached.x-body.x);
- const f=roomNavigationField(r),a=INDOOR_ROOM,cell=f.cell,cx=Math.floor((body.x-a.left)/cell),cy=Math.floor((body.y-a.top)/cell);let target=null,best=Infinity;
+ const f=roomNavigationField(r),a=ROOM_NAV_BOUNDS,cell=f.cell,cx=Math.floor((body.x-a.left)/cell),cy=Math.floor((body.y-a.top)/cell);let target=null,best=Infinity;
  // Nearby reachable centers avoid corner cutting and also recover off-grid actors.
  for(let ring=1;ring<=3&&!target;ring++)for(let y=Math.max(0,cy-ring);y<=Math.min(f.rows-1,cy+ring);y++)for(let x=Math.max(0,cx-ring);x<=Math.min(f.cols-1,cx+ring);x++){
   const i=y*f.cols+x;if(f.dist[i]<0)continue;const px=a.left+(x+.5)*cell,py=a.top+(y+.5)*cell,d=Math.hypot(px-body.x,py-body.y);
@@ -1828,7 +1823,7 @@ function roomChaseAngle(body){
  return Math.atan2(player.y-body.y,player.x-body.x);
 }
 
-function roomClampCamera(){const a=INDOOR_ROOM,pad=a.wall+12;cameraX=Math.max(a.left-pad,Math.min(a.right+pad-W,cameraX));cameraY=Math.max(a.top-pad,Math.min(a.bottom+pad-H,cameraY));}
+function roomClampCamera(){/* The camera follows freely; there is no outer boundary. */}
 function roomOffscreen(body){return body.x+body.r<cameraX-30||body.x-body.r>cameraX+W+30||body.y+body.r<cameraY-30||body.y-body.r>cameraY+H+30;}
 function roomPlaceEnemy(body){
  if(roomContains(body.x,body.y,body.r)&&roomOffscreen(body))return body;
@@ -1837,9 +1832,10 @@ function roomPlaceEnemy(body){
   const angle=Math.random()*Math.PI*2,d=min+Math.random()*(max-min),x=player.x+Math.cos(angle)*d,y=player.y+Math.sin(angle)*d;
   if(roomContains(x,y,body.r)&&roomOffscreen({x,y,r:body.r})){body.x=x;body.y=y;return body;}
  }
- // A bounded fallback avoids edge clumping and spawning on the player.
- const a=INDOOR_ROOM,r=body.r+24,points=[{x:a.left+r,y:a.top+r},{x:a.right-r,y:a.top+r},{x:a.left+r,y:a.bottom-r},{x:a.right-r,y:a.bottom-r}];
- points.sort((p,q)=>Math.hypot(q.x-player.x,q.y-player.y)-Math.hypot(p.x-player.x,p.y-player.y));Object.assign(body,points[0]);return body;
+ // Fallback stays around the player even far beyond the old room footprint.
+ const distance=Math.max(W,H)*.62;
+ for(let i=0;i<16;i++){const angle=i*Math.PI/8,x=player.x+Math.cos(angle)*distance,y=player.y+Math.sin(angle)*distance;if(roomContains(x,y,body.r)&&roomOffscreen({x,y,r:body.r})){body.x=x;body.y=y;return body;}}
+ return roomClampCircle(body);
 }
 function roomPlaceNear(body,origin,distance){
  if(roomContains(body.x,body.y,body.r))return body;
@@ -1851,28 +1847,16 @@ function roomPlaceNear(body,origin,distance){
  return roomClampCircle(body);
 }
 function drawIndoorRoom(sx,sy){
- const a=INDOOR_ROOM,l=sx(a.left),t=sy(a.top),w=a.right-a.left,h=a.bottom-a.top,wall=a.wall;
- ctx.save();ctx.fillStyle='#080e18';ctx.fillRect(0,0,W,H);
- ctx.fillStyle='#182735';ctx.fillRect(l,t,w,h);
- ctx.save();ctx.beginPath();ctx.rect(l,t,w,h);ctx.clip();
- const tile=96,startX=Math.max(a.left,Math.floor(cameraX/tile)*tile),startY=Math.max(a.top,Math.floor(cameraY/tile)*tile);
- ctx.lineWidth=1;ctx.strokeStyle='#2c404b';
- for(let x=startX;x<=Math.min(a.right,cameraX+W+tile);x+=tile){ctx.beginPath();ctx.moveTo(sx(x),t);ctx.lineTo(sx(x),t+h);ctx.stroke();}
- for(let y=startY;y<=Math.min(a.bottom,cameraY+H+tile);y+=tile){ctx.beginPath();ctx.moveTo(l,sy(y));ctx.lineTo(l+w,sy(y));ctx.stroke();}
- // Broad floor markings keep the room recognizable away from the outer walls.
- ctx.strokeStyle='#66827c30';ctx.lineWidth=4;ctx.strokeRect(sx(-1700),sy(-1000),3400,2000);ctx.strokeRect(sx(-280),sy(-180),560,360);
- ctx.fillStyle='#8eaaa542';ctx.textAlign='center';ctx.font='bold 38px "NPS Game",sans-serif';ctx.fillText('NABEEN SURVIVAL',sx(0),sy(-28));ctx.font='15px "NPS Game",sans-serif';
- // A repeated painted strip suggests indoor aisles without adding obstacles.
- ctx.fillStyle='#56716c27';for(let y=-840;y<=840;y+=420){for(let x=-1470;x<=1470;x+=420)ctx.fillRect(sx(x)-35,sy(y)-3,70,6);}
- ctx.restore();
- // Outer walls are drawn before weapons so beams and area effects stay visible across them.
- ctx.fillStyle='#31434f';ctx.fillRect(l-wall,t-wall,w+wall*2,wall);ctx.fillRect(l-wall,t+h,w+wall*2,wall);ctx.fillRect(l-wall,t,wall,h);ctx.fillRect(l+w,t,wall,h);
- ctx.strokeStyle='#859b9b';ctx.lineWidth=3;ctx.strokeRect(l,t,w,h);
- ctx.strokeStyle='#0b111b';ctx.lineWidth=7;ctx.strokeRect(l-wall,t-wall,w+wall*2,h+wall*2);
- ctx.fillStyle='#d6bd7577';for(let x=a.left+80;x<a.right;x+=240){ctx.fillRect(sx(x),t-9,75,6);ctx.fillRect(sx(x),t+h+3,75,6);}for(let y=a.top+80;y<a.bottom;y+=240){ctx.fillRect(l-9,sy(y),6,75);ctx.fillRect(l+w+3,sy(y),6,75);}
+ // Continuous ground replaces the finite floor and the four exterior walls.
+ ctx.save();ctx.fillStyle='#182735';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#2c404b';ctx.lineWidth=1;
+ const tile=96,startX=Math.floor(cameraX/tile)*tile,startY=Math.floor(cameraY/tile)*tile;
+ for(let x=startX;x<=cameraX+W+tile;x+=tile){ctx.beginPath();ctx.moveTo(sx(x),0);ctx.lineTo(sx(x),H);ctx.stroke();}
+ for(let y=startY;y<=cameraY+H+tile;y+=tile){ctx.beginPath();ctx.moveTo(0,sy(y));ctx.lineTo(W,sy(y));ctx.stroke();}
+ ctx.strokeStyle='#66827c30';ctx.lineWidth=4;ctx.strokeRect(sx(-280),sy(-180),560,360);
+ ctx.fillStyle='#8eaaa542';ctx.textAlign='center';ctx.font='bold 38px "NPS Game",sans-serif';ctx.fillText('NABEEN SURVIVAL',sx(0),sy(-28));
+ ctx.fillStyle='#56716c27';for(let y=-840;y<=840;y+=420)for(let x=-1470;x<=1470;x+=420)ctx.fillRect(sx(x)-35,sy(y)-3,70,6);
  ctx.restore();
 }
-
 function beginGame(){
   leaveLobby();roomNavFields.clear();
   renderMealHud();

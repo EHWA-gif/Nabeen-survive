@@ -2045,12 +2045,15 @@ function collectAllGems(){
   let gained=0;
   for(const g of collected) gained+=g.value*randomEventGemMultiplier;
 
+  // An empty second magnet must not erase experience already in flight.
+  if(!collected.length)return;
+  const pending=magnetEffect.active?magnetEffect:null;
   magnetEffect={
     active:true,
     time:0,
     duration:.85,
-    gems:collected,
-    gained:gained
+    gems:pending?pending.gems.concat(collected):collected,
+    gained:(pending?pending.gained:0)+gained
   };
   sponsorEvent('gems',collected.length);dailyEvent('gems',collected.length);
   gems.length=0;
